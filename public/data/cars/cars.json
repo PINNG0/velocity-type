@@ -1,0 +1,9 @@
+{
+  "cars": [
+    {
+      "id": "starter",
+      "name": "Velocity One",
+      "maxSpeed": 320
+    }
+  ]
+}

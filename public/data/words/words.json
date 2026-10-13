@@ -1,0 +1,7 @@
+{
+  "difficulty": {
+    "easy": ["speed", "race", "road", "car", "fast"],
+    "medium": ["engine", "velocity", "corner", "racing", "keyboard"],
+    "hard": ["acceleration", "performance", "determination", "championship"]
+  }
+}

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#05080d">
+    <title>Velocity Type</title>
+    <link rel="stylesheet" href="./src/ui/styles/main.css">
+</head>
+<body>
+<a class="skip-link" href="#start-race-button">Ir para o início da corrida</a>
+<div id="sr-announcer" class="sr-only" role="status" aria-live="polite"></div>
+<div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px;color:#fff">O Velocity Type precisa de JavaScript habilitado.</p></noscript>
+<main id="app" class="game-shell">
+
+    <section id="main-menu" class="screen active">
+        <div class="menu-card menu-hero">
+            <div class="logo-mark"><span>VT</span></div>
+            <p class="eyebrow">NEON CIRCUIT · SOLO RUN</p>
+            <h1>VELOCITY <span>TYPE</span></h1>
+            <p class="subtitle">
+                Sua digitação é o acelerador. Mantenha o ritmo, preserve a precisão
+                e faça o carro chegar primeiro.
+            </p>
+
+            <div class="menu-specs">
+                <div><strong id="menu-distance">2.4</strong><span>KM DE PISTA</span></div>
+                <div><strong>4</strong><span>PILOTOS</span></div>
+                <div><strong>320</strong><span>KM/H MÁX.</span></div>
+            </div>
+
+            <div class="feature-list">
+                <span>⌨ FLUXO CONTÍNUO</span>
+                <span>🏎 COCKPIT</span>
+                <span>⚡ COMBO</span>
+                <span>🏆 RECORDE</span>
+            </div>
+
+            <section id="profile-bar" class="profile-bar" aria-label="Perfil do piloto">
+                <div class="profile-level"><span>NÍVEL</span><strong id="profile-level">1</strong></div>
+                <div class="profile-xp">
+                    <div id="profile-xp-bar" class="xp-track" role="progressbar" aria-label="Progresso de XP no nível" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="profile-xp-fill" class="xp-fill"></div></div>
+                    <small><span id="profile-xp-label">0 / 100 XP</span> · <span id="profile-total-xp">0 XP total</span></small>
+                </div>
+                <div id="skin-picker" class="skin-picker" role="radiogroup" aria-label="Pintura do carro"></div>
+            </section>
+
+            <div class="race-options" aria-label="Configurações da corrida">
+                <label><span>IDIOMA / LANGUAGE</span><select id="content-language"><option value="pt" selected>Português</option><option value="en">English</option></select></label>
+                <label><span>DIFICULDADE</span><select id="difficulty-mode"><option value="adaptive" selected>Adaptativo</option><option value="very-easy">Muito fácil</option><option value="easy">Fácil</option><option value="medium">Médio</option><option value="hard">Difícil</option><option value="very-hard">Muito difícil</option></select></label>
+                <label><span>MODO DE CORRIDA</span><select id="race-mode"><option value="sprint" selected>Sprint · 2,4 km</option><option value="endurance-5">Longa · 5 km</option><option value="endurance-10">Resistência · 10 km</option></select></label>
+                <label><span>ERROS</span><select id="error-mode"><option value="strict" selected>Corrigir na hora</option><option value="free">Livre (apagar depois)</option></select></label>
+                <details class="settings-disclosure">
+                    <summary>Conteúdo e temas <span id="topics-summary">Todos os temas</span></summary>
+                    <fieldset class="topic-picker" id="content-topics">
+                        <legend>TEMAS DO TEXTO / TOPICS</legend>
+                        <label class="topic-option"><input type="checkbox" value="mixed" data-content-category checked><span>Variado / Todos os temas</span></label>
+                        <label class="topic-option"><input type="checkbox" value="computing" data-content-category checked><span>Computação</span></label>
+                        <label class="topic-option"><input type="checkbox" value="science" data-content-category checked><span>Ciência</span></label>
+                        <label class="topic-option"><input type="checkbox" value="people" data-content-category checked><span>Pioneiros da Computação</span></label>
+                        <label class="topic-option"><input type="checkbox" value="code" data-content-category checked><span>Código</span></label>
+                    </fieldset>
+                </details>
+                <details class="settings-disclosure">
+                    <summary>Regras de digitação <span id="typing-rules-summary">Completa</span></summary>
+                    <div class="typing-rules">
+                        <label><input type="checkbox" id="rule-accents" checked> Exigir acentos e cedilha</label>
+                        <label><input type="checkbox" id="rule-punctuation" checked> Exigir pontuação</label>
+                        <label><input type="checkbox" id="rule-case" checked> Diferenciar maiúsculas/minúsculas</label>
+                        <label><input type="checkbox" id="rule-numbers" checked> Exigir números exatos</label>
+                        <div class="preset-actions"><button type="button" class="preset-button" data-rule-preset="full">Completa</button><button type="button" class="preset-button" data-rule-preset="simple">Simplificada</button><button type="button" class="preset-button" data-rule-preset="custom">Personalizada</button></div>
+                    </div>
+                </details>
+            </div>
+
+            <button id="start-race-button" class="primary-button">
+                COMEÇAR CORRIDA
+            </button>
+
+            <p id="menu-status" class="menu-tip" role="status" aria-live="polite">
+                Preparado para largar? O texto nunca para de chegar.
+            </p>
+            <button id="menu-records-toggle" class="secondary-button menu-records-toggle" type="button" aria-expanded="false">MEUS RECORDES E ESTATÍSTICAS</button>
+            <section id="menu-records-panel" class="records-panel" hidden aria-label="Histórico e estatísticas">
+                <h3>Seu histórico</h3>
+                <div id="player-summary" class="player-summary"></div>
+                <div class="records-tools"><button id="export-records-button" class="secondary-button" type="button">EXPORTAR HISTÓRICO</button><button id="import-records-button" class="secondary-button" type="button">IMPORTAR HISTÓRICO</button><input id="import-records-file" type="file" accept="application/json,.json" hidden><button id="clear-records-button" class="secondary-button" type="button">LIMPAR HISTÓRICO</button></div>
+                <div id="menu-records-list"></div>
+            </section>
+            <button id="objectives-toggle" class="secondary-button menu-records-toggle" type="button" aria-expanded="false" aria-controls="objectives-panel">OBJETIVOS E CONQUISTAS</button>
+            <section id="objectives-panel" class="records-panel objectives-panel" hidden aria-label="Objetivos e conquistas">
+                <h3>Desafios de hoje</h3><div id="daily-list"></div>
+                <h3>Longo prazo</h3><div id="long-list"></div>
+                <h3>Conquistas <span id="achievements-count" class="muted-count"></span></h3><div id="achievements-list" class="badge-grid"></div>
+                <h3>Histórico de progressão</h3><div id="xp-history-list"></div>
+            </section>
+        </div>
+    </section>
+
+    <section id="race-screen" class="screen race-screen" hidden>
+        <div class="race-area" id="race-area">
+            <div class="sky">
+                <div class="stars"></div>
+                <div class="moon"></div>
+                <div class="cloud cloud-a"></div>
+                <div class="cloud cloud-b"></div>
+                <div class="city city-a"></div>
+                <div class="city city-b"></div>
+                <div class="city city-c"></div>
+            </div>
+
+            <div id="speed-effects" class="speed-effects"></div>
+            <canvas id="effects-canvas" class="effects-canvas" aria-hidden="true"></canvas>
+            <div id="race-banner" class="race-banner" aria-hidden="true"></div>
+            <button id="mute-button" class="mute-button" type="button" aria-pressed="false" aria-label="Ligar ou desligar o som">SOM: ON</button>
+
+            <div class="race-top-sign">
+                <span>NEON CIRCUIT</span>
+                <small id="race-mode-label">RACE 01 · 2.4 KM · NIGHT</small>
+            </div>
+
+            <div class="race-status-pill">
+                <span>TEMPO</span><strong id="race-time-top">0.0s</strong><span id="race-status-text" hidden>READY</span>
+            </div>
+
+            <button id="pause-button" class="pause-button" disabled>PAUSAR</button>
+
+            <div class="leaderboard" id="leaderboard">
+                <div class="leaderboard-title">LIVE POSITIONS</div>
+                <div id="leaderboard-list"></div>
+            </div>
+
+            <div class="track">
+                <canvas id="track-canvas" class="track-canvas" aria-hidden="true"></canvas>
+                <div class="road-glow"></div>
+                <div class="road-line line-one"></div>
+                <div class="road-line line-two"></div>
+                <div class="road-edge edge-top"></div>
+                <div class="road-edge edge-bottom"></div>
+                <div id="opponent-layer" class="opponent-layer"></div>
+
+                <div id="player-car" class="car">
+                    <div class="car-shadow"></div>
+                    <div class="car-body">
+                        <div class="car-window"></div>
+                        <div class="car-light light-left"></div>
+                        <div class="car-light light-right"></div>
+                    </div>
+                    <div class="car-wheel wheel-left"></div>
+                    <div class="car-wheel wheel-right"></div>
+                </div>
+
+                <div class="finish-line"><span>FINISH</span></div>
+            </div>
+
+            <div id="countdown" class="countdown" hidden></div>
+
+            <div id="pause-overlay" class="pause-overlay" hidden>
+                <div class="pause-card">
+                    <strong>PAUSADO</strong>
+                    <span>Pressione ESC ou continue quando estiver pronto.</span>
+                    <button id="resume-button" class="primary-button">CONTINUAR CORRIDA</button>
+                    <button id="quit-race-button" class="secondary-button">SAIR DA CORRIDA</button>
+                </div>
+            </div>
+
+            <div class="race-progress">
+                <div class="race-progress-meta">
+                    <span>DISTÂNCIA</span>
+                    <strong id="progress-label">0%</strong>
+                </div>
+                <div class="race-progress-track">
+                    <div id="race-progress" class="race-progress-fill"></div>
+                </div>
+            </div>
+
+            <section id="cockpit" class="cockpit">
+                <div class="gauge speed-gauge">
+                    <div class="gauge-ring"></div>
+                    <div class="gauge-ticks"></div>
+                    <div id="speed-needle" class="gauge-needle"></div>
+                    <div class="gauge-center">
+                        <strong id="speed-number">0</strong>
+                        <small>KM/H</small>
+                    </div>
+                    <div class="gauge-label left-label">0</div>
+                    <div class="gauge-label right-label">320</div>
+                </div>
+
+                <div class="cockpit-center">
+                    <div class="dash-status">
+                        <div><span>WPM</span><strong id="wpm-value">0</strong></div>
+                        <div><span>PRECISÃO</span><strong id="accuracy-value">100%</strong></div>
+                        <div><span>ERROS</span><strong id="errors-value">0</strong></div>
+                        <div><span>COMBO</span><strong id="combo-value">0x</strong></div>
+                    </div>
+
+                    <div id="typing-console" class="typing-console">
+                        <div class="typing-console-title">
+                            <span><b>LIVE INPUT</b> · DIGITE PARA ACELERAR</span>
+                        </div>
+
+                        <div id="challenge-text" class="challenge-text" aria-live="off"></div>
+
+                        <input
+                            type="text"
+                            inputmode="text"
+                            id="typing-input"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            aria-label="Digite para acelerar"
+                            placeholder="Comece a digitar..."
+                        >
+                        <div id="typing-hint" class="typing-hint" role="status" aria-live="polite" hidden></div>
+                    </div>
+
+
+                </div>
+
+                <div class="gauge rpm-gauge">
+                    <div class="gauge-ring"></div>
+                    <div class="gauge-ticks"></div>
+                    <div id="rpm-needle" class="gauge-needle"></div>
+                    <div class="gauge-center">
+                        <strong id="gear-value">N</strong>
+                        <small>GEAR</small>
+                    </div>
+                    <div class="gauge-label left-label">1</div>
+                    <div class="gauge-label right-label">6</div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <section id="results-screen" class="screen" hidden>
+        <div class="menu-card result-card">
+            <p class="eyebrow">RACE REPORT · NEON CIRCUIT</p>
+            <h2 id="result-title">RESULTADO</h2>
+            <p id="result-winner" class="result-winner" hidden>—</p>
+            <div class="result-position">
+                <span>SUA POSIÇÃO</span>
+                <strong id="result-position">4/4</strong>
+            </div>
+
+            <section id="result-insights" class="result-xp" aria-label="Análise da corrida" hidden>
+                <div class="result-xp-head"><span>RITMO NA CORRIDA (WPM)</span></div>
+                <div id="result-chart" class="result-chart"></div>
+                <p id="result-misses" class="result-misses"></p>
+            </section>
+
+            <section id="result-xp" class="result-xp" aria-label="Experiência ganha" hidden>
+                <div class="result-xp-head"><span>XP GANHO</span><strong id="result-xp-total">+0</strong><em id="result-level">NV 1</em></div>
+                <div class="xp-track"><div id="result-xp-fill" class="xp-fill"></div></div>
+                <div id="levelup-banner" class="levelup-banner" role="status" hidden>NÍVEL ACIMA!</div>
+                <ul id="result-xp-breakdown" class="xp-breakdown"></ul>
+                <ul id="result-events" class="result-events"></ul>
+            </section>
+
+            <button id="record-details-toggle" class="secondary-button" type="button" aria-expanded="false">DETALHES DA CORRIDA</button>
+            <div id="record-details" class="record-details" hidden>
+                <div class="results-grid">
+                    <div><span>WPM</span><strong id="result-wpm">0</strong></div>
+                    <div><span>PRECISÃO</span><strong id="result-accuracy">100%</strong></div>
+                    <div><span>ERROS</span><strong id="result-errors">0</strong></div>
+                    <div><span>TEMPO</span><strong id="result-time">0s</strong></div>
+                    <div><span>VELOCIDADE MÁX.</span><strong id="result-speed">0 km/h</strong></div>
+                    <div><span>FRASES COMPLETAS</span><strong id="result-phrases">0</strong></div>
+                </div>
+                <div id="result-best" class="best-result">—</div>
+                <div id="result-config" class="result-config"></div>
+            </div>
+            <button id="open-records-button" class="secondary-button" type="button">MEUS RECORDES</button>
+            <section id="records-panel" class="records-panel" hidden><h3>Histórico de corridas</h3><div id="records-list"></div></section>
+            <div class="result-actions">
+                <button id="restart-button" class="primary-button">CORRER NOVAMENTE</button>
+                <button id="results-menu-button" class="secondary-button">VOLTAR AO MENU</button>
+            </div>
+        </div>
+    </section>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -473,3 +473,232 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
     .leaderboard { display: none; }
     .onboard-hint { font-size: 12px; padding: 4px 8px; }
 }
+
+/* beta.6 — menu cinematográfico inspirado na referência; corrida inalterada */
+#main-menu {
+    position: relative;
+    display: block;
+    min-height: 100svh;
+    height: 100svh;
+    overflow: hidden;
+    padding: 0;
+    isolation: isolate;
+    background: #070a12 url('/assets/images/backgrounds/menu-scene.webp') center 55% / cover no-repeat;
+}
+#main-menu::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(3,6,12,.88) 0%, rgba(4,7,14,.76) 28%, rgba(5,8,15,.18) 58%, rgba(3,6,12,.12) 100%), linear-gradient(0deg, rgba(2,4,9,.72), transparent 32%, rgba(3,5,10,.15));
+}
+#main-menu .menu-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: clamp(26px, 5vh, 58px) clamp(24px, 5.5vw, 92px) 24px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+#main-menu .logo-mark { display: none; }
+#main-menu .eyebrow {
+    order: 0;
+    margin: 0 0 8px 4px;
+    color: #e1e7f2;
+    font-size: 11px;
+    letter-spacing: .38em;
+    text-shadow: 0 2px 12px #000;
+}
+#main-menu h1 {
+    order: 1;
+    max-width: 620px;
+    font-size: clamp(56px, 7.2vw, 112px);
+    font-weight: 1000;
+    line-height: .83;
+    letter-spacing: -.075em;
+    text-transform: uppercase;
+    font-style: italic;
+    text-shadow: 0 5px 0 rgba(0,0,0,.24), 0 10px 32px rgba(0,0,0,.65);
+}
+#main-menu h1 span { display: block; color: #ff1748; margin-left: clamp(65px, 13vw, 180px); }
+#main-menu .subtitle { display: none; }
+#main-menu .lang-switch {
+    position: absolute;
+    top: 16px;
+    left: clamp(24px, 3vw, 48px);
+    transform: none;
+    margin: 0;
+    opacity: 1;
+    pointer-events: auto;
+}
+#main-menu .primary-button#start-race-button {
+    order: 2;
+    position: relative;
+    width: min(430px, 43vw);
+    min-height: 70px;
+    margin: clamp(28px, 5vh, 58px) 0 10px;
+    padding: 18px 24px 18px 72px;
+    border: 1px solid #ff8194;
+    border-radius: 14px;
+    color: #fff;
+    background: linear-gradient(105deg, #ff1748, #a80029 82%);
+    box-shadow: 0 0 0 1px rgba(255,23,72,.6), 0 0 24px rgba(255,23,72,.36), inset 0 1px rgba(255,255,255,.28);
+    font-size: clamp(16px, 1.7vw, 25px);
+    font-style: italic;
+    text-align: left;
+    text-transform: uppercase;
+}
+#main-menu .primary-button#start-race-button::before {
+    content: "⚑";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 54px;
+    display: grid;
+    place-items: center;
+    border-right: 1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.08);
+    border-radius: 13px 0 0 13px;
+    font-size: 28px;
+    font-style: normal;
+}
+#main-menu .primary-button#start-race-button::after {
+    content: "›";
+    position: absolute;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-53%);
+    font-size: 32px;
+    font-weight: 400;
+}
+#main-menu .menu-tip { display: none; }
+#main-menu .menu-specs { display: none; }
+#main-menu #profile-bar {
+    position: absolute;
+    top: clamp(24px, 4.5vh, 48px);
+    right: clamp(24px, 3vw, 52px);
+    width: min(350px, 29vw);
+    margin: 0;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid rgba(182,204,231,.25);
+    border-radius: 14px;
+    background: rgba(8,12,21,.76);
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    backdrop-filter: blur(12px);
+}
+#main-menu .profile-level {
+    flex: 0 0 58px;
+    width: 58px;
+    height: 58px;
+    border: 4px solid #21c7ff;
+    border-left-color: #43536a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+#main-menu .profile-level span { display: none; }
+#main-menu .profile-level strong { font-size: 24px; }
+#main-menu .profile-xp { min-width: 0; flex: 1; }
+#main-menu .xp-track { height: 9px; margin: 8px 0 5px; background: #242633; }
+#main-menu .profile-xp small { color: #c2ccdb; font-size: 10px; }
+#main-menu .settings-disclosure.options-panel {
+    order: 3;
+    width: min(430px, 43vw);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+#main-menu .options-panel > summary {
+    display: block;
+    min-height: 64px;
+    padding: 21px 22px 18px 84px;
+    position: relative;
+    border: 1px solid rgba(155,185,220,.25);
+    border-radius: 13px;
+    background: linear-gradient(100deg, rgba(7,13,23,.94), rgba(15,22,34,.8));
+    color: #edf3fc;
+    font-size: clamp(14px, 1.2vw, 19px);
+    font-weight: 700;
+    letter-spacing: .015em;
+    list-style: none;
+    cursor: pointer;
+}
+#main-menu .options-panel > summary::-webkit-details-marker { display: none; }
+#main-menu .options-panel > summary::before { content: "⚙"; position: absolute; left: 0; top: 0; bottom: 0; width: 62px; display: grid; place-items: center; border-right: 1px solid rgba(155,185,220,.16); background: rgba(1,5,11,.45); color: #a9c7e8; font-size: 27px; }
+#main-menu .options-panel > summary::after { content: "›"; position: absolute; right: 22px; top: 50%; transform: translateY(-50%); font-size: 28px; color: #a9c7e8; }
+#main-menu .options-panel > .garage,
+#main-menu .options-panel > .race-options { display: none; }
+#main-menu .menu-records-toggle {
+    order: 4;
+    width: min(430px, 43vw);
+    min-height: 64px;
+    margin: 0 0 8px;
+    padding: 12px 22px 12px 84px;
+    position: relative;
+    text-align: left;
+    color: #edf3fc;
+    border: 1px solid rgba(155,185,220,.25);
+    border-radius: 13px;
+    background: linear-gradient(100deg, rgba(7,13,23,.94), rgba(15,22,34,.8));
+    font-size: clamp(14px, 1.2vw, 19px);
+    font-weight: 700;
+    letter-spacing: .015em;
+    box-shadow: inset 0 1px rgba(255,255,255,.04);
+}
+#main-menu #menu-records-toggle::before { content: "▥"; }
+#main-menu #objectives-toggle::before { content: "♜"; }
+#main-menu .menu-records-toggle::before {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 62px;
+    display: grid; place-items: center;
+    border-right: 1px solid rgba(155,185,220,.16);
+    background: rgba(1,5,11,.45);
+    color: #a9c7e8;
+    font-size: 27px;
+}
+#main-menu .menu-records-toggle:hover { border-color: rgba(85,214,255,.65); background: rgba(13,25,39,.95); }
+#main-menu .records-panel { order: 5; width: min(430px, 43vw); max-height: 28vh; overflow: auto; }
+#main-menu #objectives-toggle { order: 6; }
+#main-menu .options-panel[open] { order: 7; }
+#main-menu .options-panel[open] > summary { display: block; }
+#main-menu .options-panel[open] > .garage,
+#main-menu .options-panel[open] > .race-options { display: block; }
+#main-menu .options-panel[open] { width: min(430px, 43vw); max-height: 42vh; overflow: auto; padding: 10px 14px; background: rgba(5,9,16,.94); border: 1px solid #344154; border-radius: 12px; }
+#main-menu .options-panel[open] .options-panel > summary { display: block; }
+#main-menu .skip-link { z-index: 500; }
+@media (max-height: 720px) and (min-width: 701px) {
+    #main-menu .menu-card { padding-top: 28px; }
+    #main-menu h1 { font-size: clamp(48px, 6vw, 78px); }
+    #main-menu .primary-button#start-race-button { min-height: 58px; margin-top: 24px; }
+    #main-menu .menu-records-toggle { min-height: 53px; margin-bottom: 6px; }
+    #main-menu #profile-bar { top: 18px; }
+}
+@media (max-width: 700px) {
+    #main-menu { height: auto; min-height: 100svh; overflow: auto; background-position: 58% center; }
+    #main-menu .menu-card { min-height: 100svh; height: auto; padding: 100px 22px 26px; }
+    #main-menu h1 { font-size: clamp(48px, 13vw, 76px); }
+    #main-menu #profile-bar { top: 14px; right: 14px; width: min(260px, calc(100vw - 28px)); padding: 8px 10px; }
+    #main-menu .profile-level { flex-basis: 42px; width: 42px; height: 42px; }
+    #main-menu .profile-level strong { font-size: 18px; }
+    #main-menu .primary-button#start-race-button,
+    #main-menu .menu-records-toggle,
+    #main-menu .records-panel,
+    #main-menu .options-panel[open] { width: 100%; }
+    #main-menu .primary-button#start-race-button { margin-top: 28px; }
+    #main-menu .lang-switch { top: 64px; left: 22px; opacity: 1; pointer-events: auto; }
+}

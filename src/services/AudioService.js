@@ -3,7 +3,7 @@ import { Logger } from './Logger.js';
 
 const clamp01 = v => Math.min(1, Math.max(0, Number.isFinite(v) ? v : 0));
 // Intervalo mínimo entre repetições de cada efeito (ms) para evitar "metralhadora" de sons.
-const MIN_GAP = { error: 90, phrase: 60, combo: 200, overtake: 400, tick: 40 };
+const MIN_GAP = { word: 50, error: 90, turbo: 500, phrase: 60, combo: 200, overtake: 400, tick: 40 };
 
 // Áudio 100% procedural (WebAudio): não depende de arquivos e falha em silêncio se indisponível.
 export class AudioService {
@@ -72,14 +72,17 @@ export class AudioService {
     // Compatível com o uso anterior.
     beep(frequency = 440, duration = 0.08) { this.tone(frequency, duration, { type: 'sine', gain: 0.04 }); }
 
-    sfx(name) {
+    sfx(name, arg = 0) {
         const now = performance.now();
         const gap = MIN_GAP[name] ?? 0;
         if (gap && now - (this.lastPlayed[name] ?? -1e9) < gap) return;
         this.lastPlayed[name] = now;
         switch (name) {
-            case 'countdown': this.tone(520, 0.12, { type: 'square', gain: 0.035 }); break;
+            case 'countdown': this.tone(440 + (3 - Number(arg || 3)) * 110, 0.16, { type: 'square', gain: 0.04 }); break;
+            case 'rev': this.tone(70 + Number(arg || 0) * 55, 0.28, { type: 'sawtooth', gain: 0.03, slideTo: 150 + Number(arg || 0) * 90 }); break;
+            case 'turbo': this.tone(180, 0.55, { type: 'sawtooth', gain: 0.05, slideTo: 950 }); this.tone(360, 0.4, { type: 'square', gain: 0.03, slideTo: 1300, delay: 0.05 }); break;
             case 'go': this.tone(880, 0.35, { type: 'square', gain: 0.045, slideTo: 1320 }); break;
+            case 'word': this.tone(980, 0.035, { gain: 0.022 }); break;
             case 'phrase': this.tone(760, 0.06, { gain: 0.04 }); break;
             case 'error': this.tone(150, 0.09, { type: 'sawtooth', gain: 0.035, slideTo: 90 }); break;
             case 'combo': this.tone(660, 0.08, { gain: 0.045 }); this.tone(990, 0.12, { gain: 0.045, delay: 0.07 }); break;

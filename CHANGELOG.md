@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0-beta.5
+Resposta ao diagnóstico de publicação.
+- **Interface completa em inglês e português** (`src/i18n/`): menus, opções, HUD, resultados, XP, metas, conquistas, toasts, banners, dica de erro, contagem, histórico e mensagens de importação. Primeira visita usa o idioma do navegador (não-português → inglês); botões EN/PT no topo do menu e o seletor de idioma trocam tudo na hora. Testes garantem chaves iguais nos dois idiomas, nenhum texto em português no modo inglês e nenhum texto novo do HTML sem tradução.
+- **Início rápido:** o menu agora tem título, EN/PT e o botão de jogar; opções, garagem (pinturas), temas e regras ficam recolhidos em "Opções e garagem"; lista de recursos removida. Instruções de uma linha só na 1ª corrida.
+- **Legibilidade:** nenhuma fonte abaixo de 11 px (exceto etiqueta dos rivais, 10 px); regras para áreas de jogo pequenas (ex.: 907×510 e 821×462): cockpit compacto, pista sempre visível, placar compacto/oculto em telas muito baixas; carros 30% maiores.
+- **Comunicação da corrida:** indicador "Catch X: N m ahead" / "You lead by N m" (por que estou ganhando ou perdendo) e brilho ao concluir cada palavra, com tique sonoro.
+
+## 0.3.0-beta.4
+- **Sensação de movimento:** câmera que acompanha o jogador (ele fica quase fixo e o mundo passa); cenário em paralaxe (montanhas, colinas, árvores, mureta e postes de luz em velocidades diferentes); pista com faixas que alongam com a velocidade, zebras rolando e linhas quadriculadas de largada/chegada que entram e saem da tela; rastro de velocidade e leve balanço nos carros; etiqueta com o nome dos rivais; depois da chegada o mundo continua rolando e desacelerando.
+- **Turbo por combo:** combo 25 = MINI TURBO (+8%, 2 s), 50 = TURBO (+12%, 3 s), 100 e a cada +100 = SUPER TURBO (+16%, 4 s). Chama no escapamento, linhas de velocidade douradas, tranco de câmera, banner e som. Ajustável em `src/domain/race/TurboRules.js`.
+- **Erro bem visível:** tela dá um tranco e pisca em vinheta vermelha, o console de digitação treme, o carro tropeça (−8% por 0,5 s) e o combo quebra. "Reduzir movimento" mantém só a cor.
+- **Largada em semáforo:** uma luz vermelha por segundo (PREPARAR, ATENÇÃO, QUASE!), tudo verde com "DIGITE!", motor acelerando e chama na partida.
+
 ## 0.3.0-beta.3
 - **Teclas mortas (´ ~ ^ `) e IME:** o caractere provisório da composição não conta mais como erro; só o resultado final é processado.
 - **Modo de erros:** novo seletor "Corrigir na hora" (padrão: tecla errada é recusada, conta como erro e o campo volta ao último valor certo; nunca há erro escondido) ou "Livre".

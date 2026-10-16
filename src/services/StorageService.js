@@ -8,7 +8,8 @@ export const StorageKeys = Object.freeze({
     settings: 'velocity-type-settings-v2',
     audio: 'velocity-type-audio-v1',
     profile: 'velocity-type-profile-v1',
-    progress: 'velocity-type-progress-v1'
+    progress: 'velocity-type-progress-v1',
+    onboarding: 'velocity-type-onboarding-v1'
 });
 
 export const HISTORY_LIMIT = 200;

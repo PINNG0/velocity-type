@@ -16,7 +16,10 @@ import { AdaptiveDifficultyService } from '../services/AdaptiveDifficultyService
 import { RaceRecorder } from '../services/RaceRecorder.js';
 import { TypingDiagnostics } from '../services/TypingDiagnostics.js';
 import { Logger } from '../services/Logger.js';
+import { t } from '../i18n/I18n.js';
+import { eventTitle } from '../ui/ProgressionView.js';
 import { skinsUnlockedBetween } from '../config/Unlocks.js';
+import { tierForCombo } from '../domain/race/TurboRules.js';
 
 // Reduz a série a no máximo `max` pontos (média por bloco) para guardar e desenhar.
 export function downsample(values, max) {
@@ -105,6 +108,7 @@ export class RaceController {
         this.starting = true;
         this.finishedHandled = false;
         this.stuckLogged = false;
+        this.turboShown = false;
         this.lastAcceptedValue = '';
         this.wpmSamples = [];
         this.nextSampleAt = 1;
@@ -148,7 +152,11 @@ export class RaceController {
             this.ui.setPauseAvailable(false);
             this.ui.setRevving?.(true);
 
-            await this.ui.runCountdown(3, value => this.audio.sfx(value === 'GO' ? 'go' : 'countdown'));
+            await this.ui.runCountdown(3, value => {
+                if (value === 'GO') { this.audio.sfx('go'); return; }
+                this.audio.sfx('countdown', value);
+                this.audio.sfx('rev', 4 - value);
+            });
 
             if (!this.state.is(GamePhase.COUNTDOWN)) return;
 
@@ -168,7 +176,7 @@ export class RaceController {
             Logger.error('race', 'falha ao iniciar corrida', { error: String(error?.stack ?? error) });
             this.abortRaceStart();
             this.ui.setMenuLoading(false);
-            this.ui.showMenuError('Não foi possível iniciar a corrida. Tente novamente.');
+            this.ui.showMenuError(t('menu.startError'));
         } finally {
             this.starting = false;
             this.ui.setMenuLoading(false);
@@ -209,6 +217,7 @@ export class RaceController {
         const session = this.typingSession;
         const previousErrors = session.incorrectCharacters;
         const previousCombo = session.combo;
+        const previousInputLength = session.input.length;
 
         // O valor do campo fica intacto (cursor/rolagem nativos); só o valor normalizado vai ao domínio.
         const rules = this.activeSettings?.rules || SettingsService.defaults().rules;
@@ -219,6 +228,7 @@ export class RaceController {
         // ao último valor correto. Evita erros escondidos no meio de frases longas.
         if ((this.activeSettings?.errorMode ?? 'strict') === 'strict' && !session.challenge.text.startsWith(normalized)) {
             session.registerRejectedKey();
+            this.race?.stumble();
             this.inputController.setValue(this.lastAcceptedValue);
             this.ui.updateTyping(session, this.phrasesCompleted);
             this.ui.flashError?.();
@@ -230,14 +240,20 @@ export class RaceController {
         this.typingSystem.process(normalized);
         this.ui.updateTyping(session, this.phrasesCompleted);
 
+        const completedWord = session.input.length > previousInputLength && (session.input.endsWith(' ') || session.isComplete) && session.incorrectCharacters === previousErrors;
+        const turboTier = session.combo > previousCombo ? tierForCombo(session.combo) : null;
         if (session.incorrectCharacters > previousErrors) {
+            this.race?.stumble();
             this.ui.flashError?.();
             this.audio.sfx('error');
+        } else if (turboTier) {
+            this.race?.activateTurbo(turboTier); // o banner/áudio saem do evento 'turbo' no próximo quadro
         } else if (session.combo !== previousCombo && isComboMilestone(session.combo)) {
             this.ui.pulseCombo?.(session.combo);
             this.audio.sfx('combo');
         }
 
+        if (completedWord) { this.ui.pulseWord?.(); this.audio.sfx('word'); }
         if (session.isComplete) this.completePhrase();
         else this.logStuckPhrase(session);
     }
@@ -339,7 +355,11 @@ export class RaceController {
         this.ui.updateRace(this.race, this.typingSession, deltaTime);
         this.audio.updateEngine(this.race.car.speed / (this.config.race?.maxSpeedKmh || 320));
 
+        const turboNow = this.race.turboRemaining > 0;
+        if (turboNow !== this.turboShown) { this.turboShown = turboNow; this.ui.setTurbo?.(turboNow); }
+
         for (const event of this.race.drainEvents()) {
+            if (event.type === 'turbo') { this.ui.playTurbo?.(event); this.audio.sfx('turbo'); Logger.info('race', 'turbo', event); continue; }
             this.ui.playOvertake?.(event);
             this.audio.sfx(event.type);
             Logger.debug('race', event.type, event);
@@ -363,6 +383,8 @@ export class RaceController {
         });
 
         this.state.setPhase(GamePhase.FINISHED);
+        this.turboShown = false;
+        this.ui.setTurbo?.(false);
         session.finish();
         this.inputController?.disable();
         this.audio.stopEngine();
@@ -418,15 +440,15 @@ export class RaceController {
         this.ui.showResults(result, isBest, progression);
         if (progression?.leveledUp) {
             this.audio.sfx('levelup');
-            this.ui.toast?.(`Nível ${progression.levelAfter} alcançado!`, 'success');
-            for (const skin of skinsUnlockedBetween(progression.levelBefore, progression.levelAfter)) this.ui.toast?.(`Nova pintura desbloqueada: ${skin.name}`, 'success');
+            this.ui.toast?.(t('toast.levelup', { level: progression.levelAfter }), 'success');
+            for (const skin of skinsUnlockedBetween(progression.levelBefore, progression.levelAfter)) this.ui.toast?.(t('toast.skin', { name: t(`skin.${skin.id}`, null, skin.name) }), 'success');
         }
         for (const event of progression?.events ?? []) {
-            if (event.type === 'achievement') { this.audio.sfx('achievement'); this.ui.toast?.(`Conquista: ${event.title} (+${event.rewardXp} XP)`, 'success'); }
-            else if (event.rewardXp) this.ui.toast?.(`${event.title} concluído (+${event.rewardXp} XP)`, 'success');
+            if (event.type === 'achievement') { this.audio.sfx('achievement'); this.ui.toast?.(t('toast.achievement', { title: eventTitle(event), xp: event.rewardXp }), 'success'); }
+            else if (event.rewardXp) this.ui.toast?.(t('toast.goal', { title: eventTitle(event), xp: event.rewardXp }), 'success');
         }
         if (errors.length || progression?.persisted === false) {
-            this.ui.toast?.('Parte dos dados da corrida não pôde ser salva (armazenamento cheio ou bloqueado).', 'error');
+            this.ui.toast?.(t('toast.saveFail'), 'error');
         }
     }
 

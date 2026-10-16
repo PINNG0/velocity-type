@@ -24,6 +24,6 @@ try {
     const box = document.createElement('div');
     box.setAttribute('role', 'alert');
     box.style.cssText = 'margin:24px;padding:16px;border:1px solid #ff6677;border-radius:12px;background:#1a0a0e;color:#ffd6dc;font-family:system-ui';
-    box.textContent = `Não foi possível iniciar o Velocity Type: ${error.message}. Recarregue a página; se persistir, abra o console e execute velocityType.logs().`;
+    box.textContent = `Velocity Type could not start / Não foi possível iniciar: ${error.message}. Reload the page / Recarregue a página (console: velocityType.logs()).`;
     document.body.prepend(box);
 }

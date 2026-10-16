@@ -1,4 +1,5 @@
 import { StorageService, StorageKeys } from './StorageService.js';
+import { I18n } from '../i18n/I18n.js';
 
 const KEY = StorageKeys.settings;
 const DEFAULTS = Object.freeze({
@@ -12,7 +13,8 @@ export class SettingsService {
   static load() {
     try {
       const raw = StorageService.get(KEY);
-      if (!raw || typeof raw !== 'object') return this.defaults();
+      // Primeira visita: idioma do navegador (pt → português, resto → inglês).
+      if (!raw || typeof raw !== 'object') return { ...this.defaults(), language: I18n.detect() };
       return {
         ...this.defaults(), ...raw,
         language: raw.language === 'en' ? 'en' : 'pt',

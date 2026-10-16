@@ -1,8 +1,13 @@
 import { StorageService } from '../services/StorageService.js';
 import { BackupService } from '../services/BackupService.js';
 import { Logger } from '../services/Logger.js';
+import { I18n, t } from '../i18n/I18n.js';
 
 const lang = r => r.language === 'en' ? 'English' : 'Português';
+const yesNo = v => t(v ? 'yes' : 'no');
+const mode = r => I18n.localize('mode.', r.modeLabel || t('records.race'));
+const difficulty = r => I18n.localize('diff.', r.difficultyLabel || '—');
+const topics = r => (r.categories || []).map(c => t(`topics.${c}`, null, c)).join(', ') || t('topics.all');
 
 // Histórico de corridas: listas, estatísticas, exportação, importação e limpeza.
 export class RecordsView {
@@ -16,19 +21,19 @@ export class RecordsView {
             const open = el.recordDetails.hidden;
             el.recordDetails.hidden = !open;
             el.recordDetailsToggle.setAttribute('aria-expanded', String(open));
-            el.recordDetailsToggle.textContent = open ? 'OCULTAR DETALHES' : 'DETALHES DA CORRIDA';
+            el.recordDetailsToggle.textContent = t(open ? 'result.hideDetails' : 'result.details');
         });
         el.openRecords?.addEventListener('click', () => {
             const panel = el.recordsPanel;
             panel.hidden = !panel.hidden;
             if (!panel.hidden) this.renderRecords();
-            el.openRecords.textContent = panel.hidden ? 'MEUS RECORDES' : 'OCULTAR RECORDES';
+            el.openRecords.textContent = t(panel.hidden ? 'result.records' : 'result.recordsHide');
         });
         el.menuRecordsToggle?.addEventListener('click', () => {
             const panel = el.menuRecordsPanel;
             panel.hidden = !panel.hidden;
             el.menuRecordsToggle.setAttribute('aria-expanded', String(!panel.hidden));
-            el.menuRecordsToggle.textContent = panel.hidden ? 'MEUS RECORDES E ESTATÍSTICAS' : 'OCULTAR HISTÓRICO';
+            el.menuRecordsToggle.textContent = t(panel.hidden ? 'menu.records' : 'menu.recordsHide');
             if (!panel.hidden) this.renderMenuRecords();
         });
         el.exportRecords?.addEventListener('click', () => this.exportRecords());
@@ -37,16 +42,25 @@ export class RecordsView {
         el.clearRecords?.addEventListener('click', () => this.clearRecords());
     }
 
+    // Reaplica textos dependentes do estado dos botões quando o idioma muda.
+    refreshLabels() {
+        const el = this.el;
+        if (el.menuRecordsToggle && el.menuRecordsPanel) el.menuRecordsToggle.textContent = t(el.menuRecordsPanel.hidden ? 'menu.records' : 'menu.recordsHide');
+        if (el.openRecords && el.recordsPanel) el.openRecords.textContent = t(el.recordsPanel.hidden ? 'result.records' : 'result.recordsHide');
+        if (el.recordDetailsToggle && el.recordDetails) el.recordDetailsToggle.textContent = t(el.recordDetails.hidden ? 'result.details' : 'result.hideDetails');
+        if (el.menuRecordsPanel && !el.menuRecordsPanel.hidden) this.renderMenuRecords();
+    }
+
     clearRecords() {
-        if (!window.confirm('Apagar todo o histórico de corridas deste navegador? (O perfil, XP e conquistas são mantidos.)')) return;
+        if (!window.confirm(t('records.confirmClear'))) return;
         StorageService.clearHistory();
         this.renderMenuRecords(); this.renderRecords();
-        this.notify('Histórico de corridas apagado.', 'info');
+        this.notify(t('records.cleared'), 'info');
     }
 
     exportRecords() {
         const backup = BackupService.export();
-        if (!backup.races.length && !backup.profile.totalXp) { this.notify('Ainda não há dados para exportar.', 'warn'); return; }
+        if (!backup.races.length && !backup.profile.totalXp) { this.notify(t('records.nothingExport'), 'warn'); return; }
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -55,20 +69,20 @@ export class RecordsView {
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         Logger.info('backup', 'exportação gerada', { races: backup.races.length });
-        this.notify(`Backup exportado (${backup.races.length} corridas, perfil e conquistas).`, 'success');
+        this.notify(t('records.exported', { n: backup.races.length }), 'success');
     }
 
     async importRecords(file) {
         if (!file) return;
         try {
-            if (file.size > 5 * 1024 * 1024) throw new Error('O arquivo excede o limite de 5 MB.');
+            if (file.size > 5 * 1024 * 1024) throw Object.assign(new Error('O arquivo excede o limite de 5 MB.'), { code: 'tooBig' });
             const summary = BackupService.import(BackupService.parse(await file.text(), file.size));
             this.onDataChanged?.();
             this.renderMenuRecords(); this.renderRecords();
-            this.notify(`${summary.races} corrida(s) importada(s)${summary.profile ? ' e perfil atualizado' : ''}.`, 'success');
+            this.notify(t('records.imported', { n: summary.races, profile: summary.profile ? t('records.profileUpdated') : '' }), 'success');
         } catch (error) {
             Logger.warn('backup', 'importação rejeitada', { error: String(error.message) });
-            this.notify(`Não foi possível importar: ${error.message}`, 'error');
+            this.notify(t('records.importFail', { msg: t(`err.${error.code}`, null, error.message) }), 'error');
         } finally {
             if (this.el.importRecordsFile) this.el.importRecordsFile.value = '';
         }
@@ -81,25 +95,25 @@ export class RecordsView {
         const avgWpm = completed ? Math.round(history.reduce((s, r) => s + Number(r.wpm || 0), 0) / completed) : 0;
         const avgAccuracy = completed ? Math.round(history.reduce((s, r) => s + Number(r.accuracy || 0), 0) / completed * 100) : 0;
         if (this.el.playerSummary) {
-            this.el.playerSummary.innerHTML = `<div><strong>${completed}</strong><span>corridas</span></div><div><strong>${wins}</strong><span>vitórias</span></div><div><strong>${avgWpm}</strong><span>WPM médio</span></div><div><strong>${avgAccuracy}%</strong><span>precisão média</span></div>`;
+            this.el.playerSummary.innerHTML = `<div><strong>${completed}</strong><span>${t('records.stat.races')}</span></div><div><strong>${wins}</strong><span>${t('records.stat.wins')}</span></div><div><strong>${avgWpm}</strong><span>${t('records.stat.avgWpm')}</span></div><div><strong>${avgAccuracy}%</strong><span>${t('records.stat.avgAcc')}</span></div>`;
         }
         if (!this.el.menuRecordsList) return;
         const e = this.escape;
         this.el.menuRecordsList.innerHTML = history.length ? history.slice(0, 12).map((r, i) => `
             <button class="record-row" type="button" data-menu-record-index="${i}">
-                <span><b>${e(r.modeLabel || 'Corrida')} · ${e(r.position || '?')}/4</b><small>${e(r.difficultyLabel || 'Médio')} · ${e(lang(r))} · ${new Date(r.date || Date.now()).toLocaleString()}</small></span>
+                <span><b>${e(mode(r))} · ${e(r.position || '?')}/4</b><small>${e(difficulty(r))} · ${e(lang(r))} · ${new Date(r.date || Date.now()).toLocaleString(I18n.lang === 'en' ? 'en-US' : 'pt-BR')}</small></span>
                 <strong>${Number(r.timeSeconds || 0).toFixed(1)}s</strong>
-            </button>`).join('') : '<p class="records-empty">Complete uma corrida para começar seu histórico.</p>';
+            </button>`).join('') : `<p class="records-empty">${t('records.empty')}</p>`;
         this.el.menuRecordsList.querySelectorAll('[data-menu-record-index]').forEach(button => button.addEventListener('click', () => {
             const r = history[Number(button.dataset.menuRecordIndex)];
+            const rules = r.rules || {};
             window.alert([
-                `Posição: ${r.position || '?'} / 4`, `Tempo: ${Number(r.timeSeconds || 0).toFixed(1)} s`,
-                `WPM: ${Math.round(r.wpm || 0)}`, `Precisão: ${Math.round((r.accuracy || 0) * 100)}%`,
-                `Erros: ${r.errors ?? 0}`, `Combo máximo: ${r.bestCombo || 0}`,
-                `Distância: ${r.distance || 0} m`, `Dificuldade: ${r.difficultyLabel || '—'}`,
-                `Modo: ${r.modeLabel || '—'}`, `Idioma: ${lang(r)}`,
-                `Temas: ${(r.categories || []).join(', ') || 'Todos'}`,
-                `Regras: acentos ${r.rules?.accents ? 'sim' : 'não'}, pontuação ${r.rules?.punctuation ? 'sim' : 'não'}, maiúsculas ${r.rules?.caseSensitive ? 'sim' : 'não'}, números exatos ${r.rules?.numbersExact ? 'sim' : 'não'}`
+                t('rd.position', { v: r.position || '?' }), t('rd.time', { v: Number(r.timeSeconds || 0).toFixed(1) }),
+                t('rd.wpm', { v: Math.round(r.wpm || 0) }), t('rd.accuracy', { v: Math.round((r.accuracy || 0) * 100) }),
+                t('rd.errors', { v: r.errors ?? 0 }), t('rd.combo', { v: r.bestCombo || 0 }),
+                t('rd.distance', { v: r.distance || 0 }), t('rd.difficulty', { v: difficulty(r) }),
+                t('rd.mode', { v: mode(r) }), t('rd.language', { v: lang(r) }), t('rd.topics', { v: topics(r) }),
+                t('rd.rules', { a: yesNo(rules.accents), p: yesNo(rules.punctuation), c: yesNo(rules.caseSensitive), n: yesNo(rules.numbersExact) })
             ].join('\n'));
         }));
     }
@@ -109,14 +123,14 @@ export class RecordsView {
         const e = this.escape;
         this.el.recordsList.innerHTML = history.length ? history.map((r, i) => `
           <button class="record-row" type="button" data-record-index="${i}">
-            <span><b>#${i + 1} · ${e(r.position || '?')}/4</b><small>${e(r.modeLabel || 'Corrida')} · ${new Date(r.date || Date.now()).toLocaleDateString()}</small></span>
+            <span><b>#${i + 1} · ${e(r.position || '?')}/4</b><small>${e(mode(r))} · ${new Date(r.date || Date.now()).toLocaleDateString(I18n.lang === 'en' ? 'en-US' : 'pt-BR')}</small></span>
             <strong>${Number(r.timeSeconds || 0).toFixed(1)}s</strong>
-          </button>`).join('') : '<p class="records-empty">Ainda não há corridas registradas.</p>';
+          </button>`).join('') : `<p class="records-empty">${t('records.emptyShort')}</p>`;
         this.el.recordsList.querySelectorAll('[data-record-index]').forEach(button => button.addEventListener('click', () => {
             const r = history[Number(button.dataset.recordIndex)];
             const el = this.el;
             el.recordDetails.hidden = false;
-            el.recordDetailsToggle.textContent = 'OCULTAR DETALHES';
+            el.recordDetailsToggle.textContent = t('result.hideDetails');
             el.recordDetailsToggle.setAttribute('aria-expanded', 'true');
             el.resultWpm.textContent = Math.round(r.wpm || 0);
             el.resultAccuracy.textContent = `${Math.round((r.accuracy || 0) * 100)}%`;
@@ -130,6 +144,11 @@ export class RecordsView {
 
     describeConfig(r) {
         const rules = r.rules || {};
-        return `Dificuldade: ${r.difficultyLabel || '—'} · ${r.modeLabel || '—'} · ${lang(r)} · Temas: ${(r.categories || []).join(', ') || 'Todos os temas'} · Acentos: ${rules.accents ? 'sim' : 'não'} · Pontuação: ${rules.punctuation ? 'sim' : 'não'} · Maiúsculas: ${rules.caseSensitive ? 'sim' : 'não'} · Números: ${rules.numbersExact ? 'exatos' : 'flexíveis'} · Combo máx.: ${r.bestCombo || 0} · Data: ${new Date(r.date || Date.now()).toLocaleString()}`;
+        return t('cfg.line', {
+            diff: difficulty(r), mode: mode(r), lang: lang(r), topics: topics(r),
+            accents: yesNo(rules.accents), punct: yesNo(rules.punctuation), case: yesNo(rules.caseSensitive),
+            numbers: t(rules.numbersExact ? 'cfg.exact' : 'cfg.flexible'), combo: r.bestCombo || 0,
+            date: new Date(r.date || Date.now()).toLocaleString(I18n.lang === 'en' ? 'en-US' : 'pt-BR')
+        });
     }
 }

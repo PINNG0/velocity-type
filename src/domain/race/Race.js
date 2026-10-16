@@ -1,3 +1,4 @@
+import { TurboConfig } from './TurboRules.js';
 import { Car } from '../car/Car.js';
 import { CarStats } from '../car/CarStats.js';
 import { OpponentCar } from '../car/OpponentCar.js';
@@ -33,6 +34,8 @@ export class Race {
         // Tempo de simulação acumulado: coerente com a distância percorrida mesmo se um
         // quadro for limitado pelo clamp do delta (antes usava o relógio de parede).
         this.elapsed = 0;
+        this.turboRemaining = 0; this.turboMultiplier = 1;
+        this.stumbleRemaining = 0;
         this.events = [];
         this.lastPlayerPosition = null;
         // Classificação reutilizável (sem alocar objetos a cada quadro).
@@ -57,6 +60,7 @@ export class Race {
         this.totalPausedTime = 0;
         this.maxPlayerSpeed = 0;
         this.elapsed = 0;
+        this.turboRemaining = 0; this.turboMultiplier = 1; this.stumbleRemaining = 0;
         this.events.length = 0;
         this.refreshStandings();
         this.lastPlayerPosition = this.playerPosition;
@@ -81,6 +85,8 @@ export class Race {
         }
 
         this.elapsed += Math.max(0, deltaTime);
+        this.turboRemaining = Math.max(0, this.turboRemaining - deltaTime);
+        this.stumbleRemaining = Math.max(0, this.stumbleRemaining - deltaTime);
         this.car.update(deltaTime);
         this.maxPlayerSpeed = Math.max(this.maxPlayerSpeed, this.car.speed);
 
@@ -148,6 +154,24 @@ export class Race {
 
     getSortedCars() {
         return this.refreshStandings();
+    }
+
+    // Multiplicador de velocidade do jogador: turbo (+) e tropeço (−) ativos.
+    get speedMultiplier() {
+        return (this.turboRemaining > 0 ? this.turboMultiplier : 1) * (this.stumbleRemaining > 0 ? TurboConfig.stumble.multiplier : 1);
+    }
+
+    activateTurbo(tier) {
+        if (this.finished) return;
+        const stronger = this.turboRemaining > 0 ? Math.max(this.turboMultiplier, tier.multiplier) : tier.multiplier;
+        this.turboRemaining = Math.max(this.turboRemaining, tier.duration);
+        this.turboMultiplier = stronger;
+        this.events.push({ type: 'turbo', id: tier.id, name: tier.name, duration: tier.duration });
+        if (this.events.length > 20) this.events.shift();
+    }
+
+    stumble() {
+        if (!this.finished) this.stumbleRemaining = TurboConfig.stumble.duration;
     }
 
     drainEvents() {

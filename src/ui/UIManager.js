@@ -4,6 +4,7 @@ import { CarRenderer } from '../rendering/CarRenderer.js';
 import { OpponentRenderer } from '../rendering/OpponentRenderer.js';
 import { EffectsRenderer } from '../rendering/EffectsRenderer.js';
 import { TrackRenderer } from '../rendering/TrackRenderer.js';
+import { SceneRenderer } from '../rendering/SceneRenderer.js';
 import { Countdown } from './components/Countdown.js';
 import { TypingDisplay } from './components/TypingDisplay.js';
 import { ProgressBar } from './components/ProgressBar.js';
@@ -12,6 +13,8 @@ import { ProgressionView } from './ProgressionView.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { Logger } from '../services/Logger.js';
 import { resolveSkin } from '../config/Unlocks.js';
+import { I18n, t } from '../i18n/I18n.js';
+import { StorageService, StorageKeys } from '../services/StorageService.js';
 
 const HUD_INTERVAL_MS = 66;      // textos do HUD ~15 Hz
 const COCKPIT_INTERVAL_MS = 33;  // ponteiros/CSS vars ~30 Hz
@@ -57,8 +60,8 @@ export class UIManager {
             raceArea: 'race-area', car: 'player-car', opponents: 'opponent-layer', countdown: 'countdown', pauseOverlay: 'pause-overlay',
             effects: 'speed-effects', speedNeedle: 'speed-needle', speedNumber: 'speed-number', rpmNeedle: 'rpm-needle', gear: 'gear-value',
             // opcionais (novos recursos): ausência não impede o jogo de iniciar
-            trackCanvas: 'track-canvas', effectsCanvas: 'effects-canvas', raceBanner: 'race-banner', muteButton: 'mute-button',
-            announcer: 'sr-announcer', typingHint: 'typing-hint', errorMode: 'error-mode', skinPicker: 'skin-picker', resultInsights: 'result-insights', resultChart: 'result-chart', resultMisses: 'result-misses', toastRegion: 'toast-region',
+            trackCanvas: 'track-canvas', sceneCanvas: 'scene-canvas', effectsCanvas: 'effects-canvas', raceBanner: 'race-banner', muteButton: 'mute-button',
+            announcer: 'sr-announcer', gapPill: 'gap-pill', onboardHint: 'onboard-hint', typingHint: 'typing-hint', errorMode: 'error-mode', skinPicker: 'skin-picker', resultInsights: 'result-insights', resultChart: 'result-chart', resultMisses: 'result-misses', toastRegion: 'toast-region',
             profileLevel: 'profile-level', profileXpFill: 'profile-xp-fill', profileXpBar: 'profile-xp-bar', profileXpLabel: 'profile-xp-label', profileTotalXp: 'profile-total-xp',
             objectivesToggle: 'objectives-toggle', objectivesPanel: 'objectives-panel', dailyList: 'daily-list', longList: 'long-list',
             achievementsList: 'achievements-list', achievementsCount: 'achievements-count', xpHistoryList: 'xp-history-list',
@@ -89,7 +92,10 @@ export class UIManager {
         this.opponentRenderer = new OpponentRenderer(this.elements.opponents);
         this.effectsRenderer = new EffectsRenderer(this.elements.effects, this.elements.effectsCanvas);
         this.trackRenderer = new TrackRenderer(this.elements.trackCanvas);
+        this.sceneRenderer = new SceneRenderer(this.elements.sceneCanvas);
         if (this.trackRenderer.active) this.elements.raceArea.classList.add('track-canvas-active');
+        this.turboActive = false;
+        this.world = null;
         this.countdown = new Countdown(this.elements.countdown);
         this.typingDisplay = new TypingDisplay(this.elements.challenge);
         this.progressBar = new ProgressBar(this.elements.progress);
@@ -111,6 +117,13 @@ export class UIManager {
         const save = () => this.persistSettings();
         const e = this.elements;
         [e.language, e.difficulty, e.mode, e.errorMode, e.accents, e.punctuation, e.caseSensitive, e.numbersExact, ...e.topics].forEach(el => el?.addEventListener('change', save));
+        e.language?.addEventListener('change', () => this.applyLanguage());
+        document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => {
+            if (e.language) e.language.value = button.dataset.lang;
+            this.persistSettings();
+            this.applyLanguage();
+        }));
+        this.applyLanguage();
         document.querySelectorAll('[data-rule-preset]').forEach(button => button.addEventListener('click', () => this.applyRulePreset(button.dataset.rulePreset)));
 
         // "Variado / Todos os temas" funciona como selecionar tudo.
@@ -127,6 +140,8 @@ export class UIManager {
         const saved = SettingsService.load();
         const e = this.elements;
         if (e.language) e.language.value = saved.language;
+        I18n.setLanguage(saved.language);
+        I18n.apply();
         if (e.difficulty) e.difficulty.value = saved.difficulty;
         if (e.mode) e.mode.value = saved.mode;
         if (e.errorMode) e.errorMode.value = saved.errorMode;
@@ -153,6 +168,28 @@ export class UIManager {
         };
     }
 
+    // Troca o idioma de toda a interface (HTML estático via data-i18n + textos gerados por código).
+    applyLanguage() {
+        const lang = I18n.setLanguage(this.elements.language?.value || 'pt');
+        I18n.apply();
+        document.querySelectorAll('[data-lang]').forEach(button => {
+            const on = button.dataset.lang === lang;
+            button.setAttribute('aria-pressed', String(on));
+            button.classList.toggle('active', on);
+        });
+        this.refreshSettingsSummaries();
+        this.setMuted(Boolean(this.mutedState));
+        const e = this.elements;
+        if (!this.menuBusy) {
+            if (e.menuStatus) e.menuStatus.textContent = t('menu.ready');
+            if (e.start) e.start.textContent = t('menu.start');
+        }
+        if (e.pause) e.pause.textContent = t(e.pauseOverlay && !e.pauseOverlay.hidden ? 'race.resume' : 'race.pause');
+        this.progressionView?.refreshLabels();
+        this.recordsView?.refreshLabels();
+        this.hintKey = '';
+    }
+
     persistSettings() {
         SettingsService.save(this.getSettings());
         this.refreshSettingsSummaries();
@@ -161,10 +198,10 @@ export class UIManager {
     refreshSettingsSummaries() {
         const e = this.elements;
         const chosen = e.topics.filter(i => i.checked && i.value !== 'mixed' && i.value !== 'all');
-        if (e.topicsSummary) e.topicsSummary.textContent = chosen.length === 4 ? 'Todos os temas' : `${chosen.length} tema(s)`;
+        if (e.topicsSummary) e.topicsSummary.textContent = chosen.length === 4 ? t('topics.all') : t('topics.count', { n: chosen.length });
         if (e.rulesSummary) {
             const r = this.getSettings().rules;
-            e.rulesSummary.textContent = Object.values(r).every(Boolean) ? 'Completa' : Object.values(r).every(v => !v) ? 'Simplificada' : 'Personalizada';
+            e.rulesSummary.textContent = t(Object.values(r).every(Boolean) ? 'rules.full' : Object.values(r).every(v => !v) ? 'rules.simple' : 'rules.custom');
         }
         if (e.menuDistance && e.mode) e.menuDistance.textContent = getRaceMode(e.mode.value).km;
     }
@@ -226,9 +263,11 @@ export class UIManager {
 
     showMainMenu() {
         this.showScreen(this.screens.menu);
-        this.elements.menuStatus.textContent = 'Escolha o idioma e os temas para a próxima corrida.';
+        this.menuBusy = false;
+        if (this.elements.onboardHint) this.elements.onboardHint.hidden = true;
+        this.elements.menuStatus.textContent = t('menu.ready');
         this.elements.start.disabled = false;
-        this.elements.start.textContent = 'COMEÇAR CORRIDA';
+        this.elements.start.textContent = t('menu.start');
         this.effectsRenderer.clear();
         this.progressionView.renderMenu();
         this.elements.start.focus?.();
@@ -241,11 +280,10 @@ export class UIManager {
     }
 
     setMenuLoading(loading) {
+        this.menuBusy = loading;
         this.elements.start.disabled = loading;
-        this.elements.start.textContent = loading ? 'PREPARANDO PISTA...' : 'COMEÇAR CORRIDA';
-        this.elements.menuStatus.textContent = loading
-            ? 'Carregando pista, adversários e sequência de digitação...'
-            : 'Preparado para largar? O texto nunca para de chegar.';
+        this.elements.start.textContent = t(loading ? 'menu.preparing' : 'menu.start');
+        this.elements.menuStatus.textContent = t(loading ? 'menu.loading' : 'menu.ready');
     }
 
     async runCountdown(seconds, onTick = null) {
@@ -264,13 +302,25 @@ export class UIManager {
         }
         this.resizeCanvases();
         this.applySkin(this.carSkin || 'classic');
+        this.showOnboarding();
         this.setRaceStatus('COUNTDOWN');
     }
 
-    resizeCanvases() { this.trackRenderer?.resize(); this.effectsRenderer?.resize(); }
+    // Instruções mínimas, só até terminar a primeira corrida (o resto se aprende jogando).
+    showOnboarding() {
+        const hint = this.elements.onboardHint;
+        if (!hint) return;
+        clearTimeout(this.onboardTimer);
+        const seen = StorageService.get(StorageKeys.onboarding, false) === true;
+        hint.hidden = seen;
+        if (!seen) { this.onboardTimer = setTimeout(() => { hint.hidden = true; }, 15000); this.onboardTimer?.unref?.(); }
+    }
+
+    resizeCanvases() { this.trackRenderer?.resize(); this.effectsRenderer?.resize(); this.sceneRenderer?.resize(); }
 
     setQuality(quality) {
         this.trackRenderer?.setQuality(quality);
+        this.sceneRenderer?.setQuality(quality);
         this.effectsRenderer?.setQuality(quality);
         this.elements.raceArea?.classList.toggle('quality-low', quality === 'low');
     }
@@ -312,14 +362,14 @@ export class UIManager {
 
     showPause(visible) {
         this.elements.pauseOverlay.hidden = !visible;
-        this.elements.pause.textContent = visible ? 'CONTINUAR' : 'PAUSAR';
+        this.elements.pause.textContent = t(visible ? 'race.resume' : 'race.pause');
         this.setRaceStatus(visible ? 'PAUSED' : 'LIVE');
         if (visible) this.elements.resume.focus();
     }
 
     setRaceStatus(status) {
         this.elements.raceStatus.textContent = status;
-        const spoken = { COUNTDOWN: 'Contagem regressiva', LIVE: 'Corrida iniciada', PAUSED: 'Corrida pausada', FINISH: 'Corrida finalizada' }[status];
+        const spoken = { COUNTDOWN: t('sr.countdown'), LIVE: t('sr.live'), PAUSED: t('sr.paused'), FINISH: t('sr.finish') }[status];
         this.announce(spoken);
     }
 
@@ -328,10 +378,11 @@ export class UIManager {
     }
 
     setMuted(muted) {
+        this.mutedState = muted;
         const button = this.elements.muteButton;
         if (!button) return;
         button.setAttribute('aria-pressed', String(muted));
-        button.textContent = muted ? 'SOM: OFF' : 'SOM: ON';
+        button.textContent = t(muted ? 'mute.off' : 'mute.on');
     }
 
     // ---------- feedback visual de jogo ----------
@@ -346,30 +397,64 @@ export class UIManager {
         this.announce(text);
     }
 
-    flashError() { this.restartClass(this.elements.typingConsole ?? this.elements.challenge, 'error-flash'); }
+    // Erro bem visível: console treme e fica vermelho, tela toda dá um "tranco" com vinheta vermelha.
+    flashError() {
+        this.restartClass(this.elements.typingConsole ?? this.elements.challenge, 'error-flash');
+        this.restartClass(this.elements.raceArea, 'hit');
+    }
 
     pulseCombo(count) {
         this.restartClass(this.elements.combo, 'combo-pulse');
-        this.showBanner(`COMBO ${count}x`, 'combo', 900);
+        this.showBanner(t('banner.combo', { n: count }), 'combo', 900);
     }
 
     // Mantém confete/pista animando depois que a corrida acaba (antes dos resultados).
-    tickEffects(deltaTime) { this.effectsRenderer.render(deltaTime, 0); }
+    // Depois da chegada os carros seguem "rolando" e desacelerando até a tela de resultados.
+    tickEffects(deltaTime) {
+        const world = this.world;
+        if (!world) { this.effectsRenderer.render(deltaTime, 0); return; }
+        const decay = Math.pow(0.4, deltaTime);
+        for (const car of [world.car, ...world.opponents]) { car.speed *= decay; car.position += (car.speed / 3.6) * deltaTime; }
+        this.renderWorld(world, deltaTime);
+    }
 
     setRevving(on) { this.elements.raceArea.classList.toggle('revving', on); }
 
+    setTurbo(on) {
+        if (on === this.turboActive) return;
+        this.turboActive = on;
+        this.elements.raceArea.classList.toggle('turbo', on);
+        this.elements.car.classList.toggle('turbo', on);
+        if (on) this.restartClass(this.elements.raceArea, 'kick');
+    }
+
+    playTurbo(event) {
+        this.showBanner(`${t(`turbo.${event.id}`, null, event.name)}!`, 'turbo', 1300);
+        this.setTurbo(true);
+    }
+
+    // Chama de partida (como na referência): acende por um instante depois da largada.
+    flameOn(ms = 900) {
+        const car = this.elements.car;
+        car.classList.add('flame');
+        clearTimeout(this.flameTimer);
+        this.flameTimer = setTimeout(() => car.classList.remove('flame'), ms);
+    }
+
     playLaunch() {
         this.setRevving(false);
+        this.elements.raceArea.classList.add('moving');
+        this.flameOn(900);
         this.restartClass(this.elements.raceArea, 'launch');
-        this.showBanner('LARGADA!', 'go', 900);
+        this.showBanner(t('banner.go'), 'go', 900);
     }
 
     playOvertake(event) {
-        this.showBanner(event.type === 'overtake' ? `ULTRAPASSAGEM · ${event.to}º` : `PERDEU POSIÇÃO · ${event.to}º`, event.type === 'overtake' ? 'overtake' : 'lost', 1100);
+        this.showBanner(t(event.type === 'overtake' ? 'banner.overtake' : 'banner.lost', { to: event.to }), event.type === 'overtake' ? 'overtake' : 'lost', 1100);
     }
 
     playFinish(won, position) {
-        this.showBanner(won ? 'BANDEIRA QUADRICULADA!' : `CHEGADA · ${position}º LUGAR`, won ? 'win' : 'info', 1800);
+        this.showBanner(won ? t('banner.win') : t('banner.finish', { n: position }), won ? 'win' : 'info', 1800);
         this.elements.raceArea.classList.add('finishing');
         if (won) this.effectsRenderer.burst();
     }
@@ -377,6 +462,8 @@ export class UIManager {
     resetRaceVisuals() {
         const e = this.elements;
         this.hudCache.clear();
+        this.gapKind = '';
+        if (this.elements.gapPill) { this.elements.gapPill.textContent = ''; this.elements.gapPill.classList.remove('lead', 'chase'); }
         this.leaderboardKey = '';
         e.wpm.textContent = '0'; e.accuracy.textContent = '100%'; e.errors.textContent = '0'; e.combo.textContent = '0x';
         e.speedNumber.textContent = '0';
@@ -392,12 +479,16 @@ export class UIManager {
         this.carRenderer.reset();
         this.opponentRenderer.clear();
         this.trackRenderer.reset();
+        this.sceneRenderer.reset();
+        this.world = null;
+        this.turboActive = false;
+        e.car.classList.remove('turbo', 'flame');
         this.effectsRenderer.clear();
         this.showPause(false);
         e.countdown.hidden = true; e.countdown.textContent = '';
         e.leaderboard.innerHTML = '';
         if (e.raceBanner) e.raceBanner.className = 'race-banner';
-        e.raceArea.classList.remove('finishing', 'launch', 'revving');
+        e.raceArea.classList.remove('finishing', 'launch', 'revving', 'turbo', 'moving', 'hit', 'kick');
         this.typingUpcomingTexts = [];
         e.raceArea.style.setProperty('--speed-intensity', '0');
         e.raceArea.style.setProperty('--speed-shift', '0px');
@@ -430,12 +521,12 @@ export class UIManager {
         const index = session.firstMismatchIndex;
         const stuck = index !== -1 && session.input.length >= text.length;
         if (!stuck) { if (!hint.hidden) hint.hidden = true; this.hintKey = ''; return; }
-        const show = ch => ch === ' ' ? 'espaço' : `“${ch}”`;
+        const show = ch => ch === ' ' ? t('key.space') : `“${ch}”`;
         const key = `${index}|${session.input[index]}`;
         if (key === this.hintKey) return;
         this.hintKey = key;
         const context = text.slice(Math.max(0, index - 12), index + 12);
-        hint.innerHTML = `Há um erro na posição <b>${index + 1}</b>: esperado <b>${this.escape(show(text[index]))}</b> e você digitou <b>${this.escape(show(session.input[index]))}</b> (…${this.escape(context)}…). Use <kbd>Backspace</kbd> até ali — ou <kbd>Ctrl</kbd>+<kbd>Backspace</kbd> apaga palavra por palavra.`;
+        hint.innerHTML = t('hint.error', { pos: index + 1, expected: this.escape(show(text[index])), typed: this.escape(show(session.input[index])), context: this.escape(context) });
         hint.hidden = false;
     }
 
@@ -465,7 +556,7 @@ export class UIManager {
             this.elements.leaderboard.innerHTML = cars.map((car, index) => `
             <div class="leaderboard-row ${car.type === 'player' ? 'player' : ''}">
                 <span class="leader-position">${index + 1}</span>
-                <strong>${this.escape(car.name)}</strong>
+                <strong>${this.escape(car.type === 'player' ? t('race.you') : car.name)}</strong>
                 <span class="leader-distance">${Math.round(car.position)}m</span>
             </div>`).join('');
             this.leaderboardDistances = [...this.elements.leaderboard.querySelectorAll('.leader-distance')];
@@ -482,15 +573,45 @@ export class UIManager {
         return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
     }
 
+    // Desenha o mundo (câmera acompanha o jogador): cenário, pista, carros e efeitos.
+    renderWorld(world, deltaTime) {
+        const playerPos = world.car.position, speed = world.car.speed;
+        this.carRenderer.render(world.car, world.targetDistance, playerPos);
+        for (let i = 0; i < world.opponents.length; i++) this.opponentRenderer.render(world.opponents[i], world.targetDistance, playerPos);
+        this.sceneRenderer.render(deltaTime, speed, this.turboActive);
+        this.trackRenderer.render(deltaTime, speed, { playerPos, target: world.targetDistance }, this.turboActive);
+        this.effectsRenderer.update(speed);
+        this.effectsRenderer.render(deltaTime, speed, this.turboActive);
+    }
+
+    // "Por que estou ganhando/perdendo?": distância até o rival logo à frente, ou vantagem sobre o segundo.
+    updateGap(race) {
+        const pill = this.elements.gapPill;
+        if (!pill) return;
+        const cars = race.getSortedCars();
+        const index = race.playerPosition - 1;
+        let text, kind;
+        if (index > 0) {
+            const ahead = cars[index - 1];
+            text = t('gap.chase', { name: ahead.name, m: Math.max(1, Math.round(ahead.position - race.car.position)) });
+            kind = 'chase';
+        } else {
+            text = t('gap.lead', { m: Math.max(0, Math.round(race.car.position - cars[1].position)) });
+            kind = 'lead';
+        }
+        this.setText('gap', pill, text);
+        if (kind !== this.gapKind) { this.gapKind = kind; pill.classList.toggle('lead', kind === 'lead'); pill.classList.toggle('chase', kind === 'chase'); }
+    }
+
+    // Palavra concluída: resposta curta e clara (brilho no console + velocidade no cockpit).
+    pulseWord() { this.restartClass(this.elements.typingConsole, 'word-pop'); }
+
     // Chamado todo quadro: canvas/carros a cada quadro; textos e leaderboard com limite de frequência.
     updateRace(race, session, deltaTime = 0.016) {
         const now = performance.now();
         const e = this.elements;
-        this.carRenderer.render(race.car, race.targetDistance);
-        for (let i = 0; i < race.opponents.length; i++) this.opponentRenderer.render(race.opponents[i], race.targetDistance);
-        this.trackRenderer.render(deltaTime, race.car.speed);
-        this.effectsRenderer.update(race.car.speed);
-        this.effectsRenderer.render(deltaTime, race.car.speed);
+        this.world = race;
+        this.renderWorld(race, deltaTime);
         this.progressBar.setProgress(race.progress);
         this.updateCockpit(race, now);
 
@@ -507,6 +628,7 @@ export class UIManager {
             this.setText('accuracy', e.accuracy, `${Math.round(session.accuracy * 100)}%`);
             this.setText('errors', e.errors, session.incorrectCharacters);
             this.setText('combo', e.combo, `${session.combo}x`);
+            this.updateGap(race);
         }
         this.updateLeaderboard(race, hudDue);
     }
@@ -515,10 +637,10 @@ export class UIManager {
     showResults(result, isBest, progression = null) {
         const e = this.elements;
         e.raceArea.classList.remove('finishing');
-        e.resultTitle.textContent = result.playerWon ? 'VITÓRIA' : 'CORRIDA FINALIZADA';
+        e.resultTitle.textContent = t(result.playerWon ? 'result.win' : 'result.finished');
         e.resultWinner.textContent = '';
         if (e.recordDetails) e.recordDetails.hidden = true;
-        if (e.recordDetailsToggle) { e.recordDetailsToggle.textContent = 'DETALHES DA CORRIDA'; e.recordDetailsToggle.setAttribute('aria-expanded', 'false'); }
+        if (e.recordDetailsToggle) { e.recordDetailsToggle.textContent = t('result.details'); e.recordDetailsToggle.setAttribute('aria-expanded', 'false'); }
         e.resultWpm.textContent = Math.round(result.wpm || 0);
         e.resultAccuracy.textContent = `${Math.round(result.accuracy * 100)}%`;
         e.resultErrors.textContent = result.errors;
@@ -526,13 +648,14 @@ export class UIManager {
         e.resultSpeed.textContent = `${Math.round(result.maxSpeed)} km/h`;
         e.resultPosition.textContent = `${result.position}/4`;
         e.resultPhrases.textContent = result.phrasesCompleted;
-        e.resultBest.textContent = isBest ? 'NOVO RECORDE DE TEMPO' : '—';
+        e.resultBest.textContent = isBest ? t('result.bestRecord') : '—';
         if (e.resultConfig) e.resultConfig.textContent = this.recordsView.describeConfig(result);
         this.progressionView.renderResult(progression);
         this.renderInsights(result);
         this.showScreen(this.screens.results);
         e.restart.focus?.();
-        this.announce(`${result.playerWon ? 'Vitória' : 'Corrida finalizada'}. Posição ${result.position} de 4.${progression?.leveledUp ? ` Novo nível ${progression.levelAfter}.` : ''}`);
+        this.announce(`${t(result.playerWon ? 'sr.win' : 'sr.finished')} ${t('sr.result', { pos: result.position })}${progression?.leveledUp ? ` ${t('sr.levelUp', { level: progression.levelAfter })}` : ''}`);
+        StorageService.set(StorageKeys.onboarding, true); // instruções rápidas só na 1ª corrida
     }
 
     // Análise pós-corrida (fora da corrida, para não distrair): gráfico de WPM e teclas mais erradas.
@@ -543,16 +666,17 @@ export class UIManager {
         const misses = result.topMisses || [];
         box.hidden = series.length < 3 && !misses.length;
         if (box.hidden) return;
-        const key = k => k === ' ' ? 'espaço' : k;
+        const key = k => k === ' ' ? t('key.space') : k;
         if (this.elements.resultMisses) {
-            this.elements.resultMisses.textContent = misses.length ? `Teclas mais erradas: ${misses.map(m => `${key(m.key)} (${m.count}×)`).join(', ')}` : 'Nenhum erro de tecla nesta corrida.';
+            this.elements.resultMisses.textContent = misses.length ? t('insights.misses', { list: misses.map(m => `${key(m.key)} (${m.count}×)`).join(', ') }) : t('insights.none');
         }
         if (!this.elements.resultChart) return;
         if (series.length < 3) { this.elements.resultChart.innerHTML = ''; return; }
         const w = 320, h = 70, max = Math.max(...series, 10);
         const points = series.map((v, i) => `${(i / (series.length - 1) * w).toFixed(1)},${(h - 4 - (v / max) * (h - 12)).toFixed(1)}`).join(' ');
         const avg = Math.round(series.reduce((a, b) => a + b, 0) / series.length);
-        this.elements.resultChart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="WPM ao longo da corrida: média ${avg}, pico ${Math.max(...series)}" preserveAspectRatio="none"><polyline fill="none" stroke="#55d6ff" stroke-width="2" points="${points}"/></svg><small>média ${avg} · pico ${Math.max(...series)} WPM</small>`;
+        const peak = Math.max(...series);
+        this.elements.resultChart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${t('insights.chartAria', { avg, peak })}" preserveAspectRatio="none"><polyline fill="none" stroke="#55d6ff" stroke-width="2" points="${points}"/></svg><small>${t('insights.chartCaption', { avg, peak })}</small>`;
     }
 
     toast(message, kind) { this.progressionView.toast(message, kind); }

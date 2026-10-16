@@ -14,7 +14,8 @@ export class Car {
 
     setSpeed(speed) {
         const safeSpeed = Number.isFinite(speed) ? speed : 0;
-        this.speed = Math.max(0, Math.min(safeSpeed, this.stats.maxSpeed));
+        // Folga de 20% acima do máximo: o turbo pode ultrapassar o limite normal por alguns segundos.
+        this.speed = Math.max(0, Math.min(safeSpeed, this.stats.maxSpeed * 1.2));
     }
 
     reset() {

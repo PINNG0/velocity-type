@@ -46,7 +46,7 @@ export class RaceSystem {
         const targetSpeed = Math.min(
             normalizedWpm * settings.maxSpeedKmh * accuracyFactor * comboFactor,
             settings.maxSpeedKmh
-        );
+        ) * (this.race.speedMultiplier ?? 1); // turbo / tropeço
 
         const difference = targetSpeed - this.race.car.speed;
         const response = difference >= 0

@@ -42,7 +42,7 @@ test('todo id procurado pelo UIManager existe no HTML (obrigatórios e opcionais
 });
 
 test('acessibilidade básica: botões nomeados, campos rotulados, regiões ao vivo e idioma', () => {
-    assert.match(html, /<html lang="pt-BR">/);
+    assert.match(html, /<html lang="(en|pt-BR)">/);
     for (const m of html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
         assert.ok(m[2].trim() || /aria-label=/.test(m[1]), `botão sem nome acessível: ${m[0].slice(0, 80)}`);
     }

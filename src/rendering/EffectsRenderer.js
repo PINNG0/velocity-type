@@ -43,23 +43,23 @@ export class EffectsRenderer {
         }
     }
 
-    render(deltaTime, speedKmh) {
+    render(deltaTime, speedKmh, turbo = false) {
         if (!this.ctx || !this.width) return;
         const { ctx } = this;
         ctx.clearRect(0, 0, this.width, this.height);
         if (this.reducedMotion) return;
 
         const ratio = Math.min(speedKmh / 320, 1);
-        const target = this.quality === 'high' ? Math.round(ratio * 28) : Math.round(ratio * 8);
+        const target = (this.quality === 'high' ? Math.round(ratio * 28) : Math.round(ratio * 8)) * (turbo ? 2 : 1);
         while (this.streaks.length < target && this.streaks.length < MAX_PARTICLES) {
             this.streaks.push({ x: Math.random() * this.width, y: this.height * (0.1 + Math.random() * 0.62), len: 30 + Math.random() * 80, v: 0.7 + Math.random() * 0.8 });
         }
         if (this.streaks.length > target) this.streaks.length = target;
         ctx.lineWidth = 1.5;
         for (const s of this.streaks) {
-            s.x -= (400 + ratio * 1500) * s.v * deltaTime;
+            s.x -= (400 + ratio * 1500) * s.v * deltaTime * (turbo ? 1.5 : 1);
             if (s.x + s.len < 0) { s.x = this.width + Math.random() * 80; s.y = this.height * (0.1 + Math.random() * 0.62); }
-            ctx.strokeStyle = `rgba(170,230,255,${0.08 + ratio * 0.22})`;
+            ctx.strokeStyle = turbo ? `rgba(255,200,120,${0.16 + ratio * 0.3})` : `rgba(170,230,255,${0.08 + ratio * 0.22})`;
             ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + s.len, s.y); ctx.stroke();
         }
         for (let i = this.confetti.length - 1; i >= 0; i--) {

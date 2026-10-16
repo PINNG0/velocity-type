@@ -1,3 +1,5 @@
+import { t } from '../../i18n/I18n.js';
+
 import { TypingStream } from '../../domain/typing/TypingStream.js';
 
 export class TypingDisplay {
@@ -36,7 +38,7 @@ export class TypingDisplay {
     }
 
     mount() {
-        this.element.innerHTML = '<div class="typing-stream-viewport" aria-label="Texto contínuo da corrida"><div class="typing-stream-line"></div></div>';
+        this.element.innerHTML = `<div class="typing-stream-viewport" aria-label="${t('typing.streamAria')}"><div class="typing-stream-line"></div></div>`;
         this.viewport = this.element.querySelector('.typing-stream-viewport');
         this.line = this.element.querySelector('.typing-stream-line');
     }

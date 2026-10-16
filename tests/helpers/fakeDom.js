@@ -7,7 +7,7 @@ export const htmlIds = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
 const initiallyHidden = new Set([...html.matchAll(/<[^>]*\sid="([^"]+)"[^>]*>/g)].filter(m => /\shidden(\s|>|=|\/)/.test(m[0])).map(m => m[1]));
 
 const gradient = { addColorStop() {} };
-const ctx = Object.fromEntries(['clearRect', 'fillRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fill', 'setLineDash', 'setTransform', 'save', 'restore', 'arc']
+const ctx = Object.fromEntries(['clearRect', 'fillRect', 'beginPath', 'moveTo', 'lineTo', 'stroke', 'fill', 'setLineDash', 'setTransform', 'save', 'restore', 'arc', 'closePath']
     .map(name => [name, () => {}]));
 ctx.createLinearGradient = () => gradient;
 
@@ -33,6 +33,18 @@ export function makeElement(id = '') {
     return el;
 }
 
+// Elementos com data-i18n / data-i18n-attr, lidos do HTML real (para testar I18n.apply).
+function i18nElements() {
+    const out = { text: [], attr: [] };
+    for (const m of html.matchAll(/<(\w+)([^>]*\sdata-i18n="([^"]+)"[^>]*)>/g)) {
+        const el = makeElement(); el.attrs['data-i18n'] = m[3]; out.text.push(el);
+    }
+    for (const m of html.matchAll(/<(\w+)[^>]*\sdata-i18n-attr="([^"]+)"[^>]*>/g)) {
+        const el = makeElement(); el.attrs['data-i18n-attr'] = m[2]; out.attr.push(el);
+    }
+    return out;
+}
+
 export function installFakeDom() {
     const saved = { document: globalThis.document, window: globalThis.window, raf: globalThis.requestAnimationFrame };
     const elements = new Map(htmlIds.map(id => [id, Object.assign(makeElement(id), { hidden: initiallyHidden.has(id) })]));
@@ -40,15 +52,16 @@ export function installFakeDom() {
     const documentStub = {
         hidden: false, body: makeElement('body'), documentElement: makeElement('html'), activeElement: null,
         getElementById: id => elements.get(id) ?? null,
-        querySelectorAll: selector => selector === '[data-content-category]' ? topics : [],
+        querySelectorAll: selector => selector === '[data-content-category]' ? topics : selector === '[data-i18n]' ? i18n.text : selector === '[data-i18n-attr]' ? i18n.attr : [],
         createElement: () => makeElement(), addEventListener() {}, removeEventListener() {}
     };
+    const i18n = i18nElements();
     const alerts = [];
     globalThis.document = documentStub;
     globalThis.window = { addEventListener() {}, confirm: () => true, alert: m => alerts.push(m) };
     globalThis.requestAnimationFrame = cb => { cb(0); return 1; };
     return {
-        el: id => elements.get(id), elements, topics, alerts,
+        el: id => elements.get(id), elements, topics, alerts, i18n,
         restore() {
             for (const [k, v] of Object.entries({ document: saved.document, window: saved.window, requestAnimationFrame: saved.raf })) {
                 if (v === undefined) delete globalThis[k]; else globalThis[k] = v;

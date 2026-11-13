@@ -37,7 +37,7 @@ test('dicionários PT e EN têm as mesmas chaves e os mesmos parâmetros {x}', (
 });
 
 test('inglês não contém português (acentos e palavras típicas)', () => {
-    const allowed = new Set(['spec.drivers']); // exceções não existem hoje; lista mantida para casos futuros
+    const allowed = new Set(['lang.pt']); // nome do idioma na própria língua
     const bad = Object.entries(en).filter(([k, v]) => !allowed.has(k) && PT_MARKERS.test(v)).map(([k, v]) => `${k}: ${v}`);
     assert.deepEqual(bad, []);
 });
@@ -86,7 +86,8 @@ test('I18n: parâmetros, fallback, idioma inválido, localize e detecção do na
     assert.equal(t('nao.existe', null, 'padrão'), 'padrão');
     assert.equal(t('nao.existe'), 'nao.existe');
     assert.equal(I18n.localize('mode.', 'Sprint · 2,4 km'), 'Sprint · 2.4 km');
-    assert.equal(I18n.localize('diff.', 'Médio'), 'Medium');
+    assert.equal(I18n.localize('diff.', 'Médio'), 'Normal', 'rótulo antigo de registros salvos');
+    assert.equal(I18n.localize('diff.', 'Muito difícil'), 'Expert');
     assert.equal(I18n.localize('diff.', 'Texto desconhecido'), 'Texto desconhecido');
     assert.equal(I18n.setLanguage('xx'), 'pt');
     const prev = globalThis.window;
@@ -129,8 +130,7 @@ test('trocar o idioma traduz o HTML estático e os textos dinâmicos (EN ↔ PT)
         assert.equal(textOf('result.restart'), 'RACE AGAIN');
         assert.equal(t1.dom.el('start-race-button').textContent, 'START RACE');
         assert.equal(t1.dom.el('menu-status').textContent, 'Ready to race? The text never stops coming.');
-        assert.equal(t1.dom.el('topics-summary').textContent, 'All topics');
-        assert.equal(t1.dom.el('typing-rules-summary').textContent, 'Full');
+        assert.match(t1.dom.el('quick-play-summary').textContent, /^Short · 1 km · Normal · Random$/);
         assert.equal(t1.dom.el('mute-button').textContent, 'SOUND: ON');
         t1.ui.elements.language.value = 'pt'; t1.ui.applyLanguage();
         assert.equal(textOf('menu.start'), 'COMEÇAR CORRIDA');
@@ -187,13 +187,16 @@ test('início rápido: dica só na 1ª corrida; indicador de distância e brilho
     } finally { x.restore(); }
 });
 
-test('menu em início rápido: botão de jogar vem antes das opções e as opções ficam recolhidas', () => {
-    const play = html.indexOf('id="start-race-button"');
-    const options = html.indexOf('id="options-panel"');
-    assert.ok(play > 0 && options > play, 'jogar antes de opções');
-    assert.ok(html.indexOf('id="content-language"') > options, 'seletores avançados dentro das opções');
-    assert.ok(html.indexOf('id="skin-picker"') > options, 'garagem dentro das opções');
-    assert.doesNotMatch(html.slice(options - 60, options + 80), /\sopen[\s>]/, 'opções começam fechadas');
+test('menu: "Jogar rápido" (1 clique) e "Iniciar corrida" (abre a preparação); 5 submenus; opções fora do caminho', () => {
+    const quick = html.indexOf('id="quick-play-button"');
+    const race = html.indexOf('data-submenu="race"');
+    assert.ok(quick > 0 && quick < race && race < html.indexOf('data-submenu="garage"'), 'ordem: jogar rápido, iniciar corrida, garagem…');
+    assert.equal((html.match(/id="quick-play-button"/g) || []).length, 1);
+    assert.equal((html.match(/data-submenu="/g) || []).length, 5);
+    for (const screen of ['race', 'garage', 'history', 'progression', 'settings']) assert.match(html, new RegExp(`data-section="${screen}"`));
+    assert.match(html, /<div class="native-controls" hidden>/);
+    assert.ok(html.indexOf('id="start-race-button"') > html.indexOf('data-section="race"'), '"Começar corrida" fica na preparação');
+    assert.equal((html.match(/id="start-race-button"/g) || []).length, 1);
     assert.match(html, /data-lang="en"/);
     assert.match(html, /data-lang="pt"/);
 });

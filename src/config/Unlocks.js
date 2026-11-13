@@ -7,6 +7,6 @@ export const CarSkins = Object.freeze([
     Object.freeze({ id: 'inferno', name: 'Inferno', level: 15 })
 ]);
 
-export const isSkinUnlocked = (id, level) => CarSkins.some(s => s.id === id && level >= s.level);
+const isSkinUnlocked = (id, level) => CarSkins.some(s => s.id === id && level >= s.level);
 export const resolveSkin = (id, level) => isSkinUnlocked(id, level) ? id : 'classic';
 export const skinsUnlockedBetween = (fromLevel, toLevel) => CarSkins.filter(s => s.level > fromLevel && s.level <= toLevel);

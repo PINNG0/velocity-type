@@ -99,13 +99,16 @@ export class RecordsView {
         }
         if (!this.el.menuRecordsList) return;
         const e = this.escape;
-        this.el.menuRecordsList.innerHTML = history.length ? history.slice(0, 12).map((r, i) => `
-            <button class="record-row" type="button" data-menu-record-index="${i}">
-                <span><b>${e(mode(r))} · ${e(r.position || '?')}/4</b><small>${e(difficulty(r))} · ${e(lang(r))} · ${new Date(r.date || Date.now()).toLocaleString(I18n.lang === 'en' ? 'en-US' : 'pt-BR')}</small></span>
-                <strong>${Number(r.timeSeconds || 0).toFixed(1)}s</strong>
-            </button>`).join('') : `<p class="records-empty">${t('records.empty')}</p>`;
-        this.el.menuRecordsList.querySelectorAll('[data-menu-record-index]').forEach(button => button.addEventListener('click', () => {
-            const r = history[Number(button.dataset.menuRecordIndex)];
+        const shown = history.slice(0, 12);
+        const bestWpm = Math.max(0, ...shown.map(r => Number(r.wpm || 0)));
+        const locale = I18n.lang === 'en' ? 'en-US' : 'pt-BR';
+        this.el.menuRecordsList.innerHTML = shown.length ? `
+            <table class="history-table"><caption class="sr-only">${t('hist.caption')}</caption>
+            <thead><tr><th scope="col">#</th><th scope="col">${t('hist.date')}</th><th scope="col">${t('hist.distance')}</th><th scope="col">${t('hist.difficulty')}</th><th scope="col">${t('hist.wpm')}</th><th scope="col">${t('hist.accuracy')}</th><th scope="col">${t('hist.position')}</th></tr></thead>
+            <tbody>${shown.map((r, i) => `<tr tabindex="0" class="${Number(r.wpm || 0) === bestWpm && bestWpm > 0 ? 'best' : ''}${Number(r.position) === 1 ? ' won' : ''}" data-menu-record-index="${i}">
+                <td>${i + 1}</td><td>${new Date(r.date || Date.now()).toLocaleDateString(locale)}</td><td>${e(mode(r))}</td><td>${e(difficulty(r))}</td>
+                <td><b>${Math.round(r.wpm || 0)}</b></td><td>${Math.round((r.accuracy || 0) * 100)}%</td><td>${e(r.position || '?')}º</td></tr>`).join('')}</tbody></table>` : `<p class="records-empty">${t('records.empty')}</p>`;
+        const showDetails = r => {
             const rules = r.rules || {};
             window.alert([
                 t('rd.position', { v: r.position || '?' }), t('rd.time', { v: Number(r.timeSeconds || 0).toFixed(1) }),
@@ -115,7 +118,12 @@ export class RecordsView {
                 t('rd.mode', { v: mode(r) }), t('rd.language', { v: lang(r) }), t('rd.topics', { v: topics(r) }),
                 t('rd.rules', { a: yesNo(rules.accents), p: yesNo(rules.punctuation), c: yesNo(rules.caseSensitive), n: yesNo(rules.numbersExact) })
             ].join('\n'));
-        }));
+        };
+        this.el.menuRecordsList.querySelectorAll('[data-menu-record-index]').forEach(row => {
+            const open = () => showDetails(shown[Number(row.dataset.menuRecordIndex)]);
+            row.addEventListener('click', open);
+            row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); } });
+        });
     }
 
     renderRecords() {

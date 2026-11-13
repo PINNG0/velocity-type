@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.3.0-beta.11
+- **`npm run cleanup`:** remove os restos de versões anteriores que sobram quando um zip novo é extraído por cima de uma pasta antiga (módulos-esqueleto do modelo inicial, `EventBus.js`, `public/assets`, dados de modelo). `npm run cleanup -- --dry-run` só lista.
+- **`npm run verify` mais claro:** avisa quando há arquivos antigos e, se um teste falhar, mostra apenas os testes que falharam com a mensagem de erro (antes cortava o final da saída, onde o erro aparece).
+- Mensagens dos testes de limpeza apontam o comando `npm run cleanup`; testes cobrem o utilitário com uma pasta de teste.
+
+## 0.3.0-beta.10
+Candidata a beta final: funcionalidades pedidas + revisão geral.
+- **Dificuldade automática (adaptativa) de volta**, como interruptor no cartão de dificuldade: liga guardando o último nível manual, desliga voltando a ele; escolher um nível à mão desliga. Preferências antigas em "Adaptativo" continuam automáticas.
+- **Jogar rápido** de volta (1 clique, usa as últimas configurações); **Iniciar corrida** abre a preparação.
+- **Simulação aleatória** de menus e corridas (4 sementes × 220 ações) com regras de consistência a cada passo: uma única tela visível, fases coerentes, configurações sempre válidas, nenhum erro registrado, setas livres na corrida.
+- **Limpeza:** removidos 26 módulos-esqueleto do modelo inicial, o barramento de eventos sem ouvintes, chaves de tradução sem uso, ~6 KB de CSS do menu antigo, ids de HUD antigos, dados e pastas de modelo (`cars.json`, `tracks.json`, `words.json`, `public/assets`), exports sem uso. Valor padrão antigo "Sprint · 2,4 km" corrigido.
+- **Console limpo em produção** (só avisos/erros); ícone da aba embutido; acessibilidade: abas ligadas aos painéis, grupos de opções com nome, campo do piloto rotulado.
+- **Documentação** reescrita (README, arquitetura, checklist) e guardas de teste contra módulos órfãos, chaves de tradução sem uso, CSS legado e restos de depuração.
+
+## 0.3.0-beta.9
+Revisão do menu e do pacote.
+- **Um único botão "Iniciar corrida"** (primeiro item do menu): abre a tela de preparação; a corrida só larga em "Começar corrida". "Jogar agora" foi removido.
+- **Opções como na referência:** distâncias **Curta 1 km, Média 2 km, Longa 5 km** e **4 níveis** (Fácil, Normal, Difícil, Expert). A lógica acompanha: distância-alvo de 1000/2000/5000 m, velocidade dos rivais por nível e os testes simulam corridas completas de cada modo. Preferências antigas migram (Sprint 2,4 km → Média, Resistência → Longa, Adaptativo → Normal, Muito fácil → Fácil); regras, idioma, piloto e pintura salvos são mantidos.
+- **XP/metas por caracteres:** corridas de 1 km têm poucas frases longas e passavam por "curtas demais"; agora o mínimo é de 80 caracteres (e 200 para as conquistas de precisão). Registros antigos seguem a regra por frases.
+- **Corrida × configurações gerais:** erros ("Corrigir na hora/Livre") e regras de digitação (acentos, pontuação, maiúsculas, números) agora ficam na tela da corrida ("Regras da corrida"); Configurações ficam só com áudio, teclas, interface e desempenho.
+- **Teclado nos menus:** ↑ ↓ ← → movem a seleção (visível, com contorno branco e brilho vermelho), Enter confirma (também liga/desliga interruptores), Home/End vão ao primeiro/último, ESC volta; vale para menus, resultados e pausa. Durante a corrida nada é interceptado. Campos de texto e o controle de volume mantêm suas setas.
+- **Pacote:** removido o `public/assets/images/backgrounds/menu-scene.webp` (duplicado) e o `package-lock.json` da pasta de cima; `package-lock.json` agora na mesma versão do `package.json`. Testes impedem arquivos de 0 bytes, lock fora de sincronia e imagem duplicada. O zip não leva a pasta `.git`.
+
+## 0.3.0-beta.8
+- **Corrigido:** menu principal centralizado na tela e submenus aparecendo embaixo dos botões. Causa: uma regra antiga (`#main-menu {align-items:center; justify-content:center; padding:30px}`) continuava valendo e a regra que esconde o início ao abrir um submenu não existia. Agora os botões ficam no canto esquerdo e cada submenu abre numa janela grande que substitui o início (com mini logo e "Voltar"), como nas referências. Teste de CSS impede a regressão.
+- Cartões da corrida personalizada com ícone à esquerda e botão "Começar corrida" com bandeira, como na referência; barras de rolagem escuras e finas; ajustes de altura para telas baixas.
+
+## 0.3.0-beta.7
+Menus redesenhados (referência: print enviado) sobre a imagem `src/assets/menu-scene.webp`.
+- **Início:** logo em HTML/CSS (traduzível), perfil do piloto no canto (nome, nível, XP) e menu lateral: **Jogar agora** (1 clique, usa as configurações salvas e mostra o resumo), **Corrida personalizada**, **Garagem**, **Histórico**, **Progressão** e **Configurações**. Idioma EN/PT sempre à mão.
+- **Corrida personalizada:** chips de distância, dificuldade e tema (Aleatório = todos), prévia da corrida e botão "Começar corrida".
+- **Garagem:** palco com o carro grande, setas/miniaturas/amostras para navegar pelas pinturas, bloqueio por nível, "Equipar" e desempenho do piloto.
+- **Histórico:** cartões de estatísticas e tabela (a melhor corrida em destaque), exportar/importar/limpar.
+- **Progressão:** cartão de nível/XP, desafios do dia com contagem para o reinício (meia-noite), objetivos de longo prazo, conquistas e histórico de XP.
+- **Configurações** (abas): áudio (volume geral e som), controles (modo de erro, regras de digitação, teclas), interface (idioma, nome do piloto, reduzir movimento) e desempenho (qualidade visual automática/alta/baixa).
+- Versão exibida no menu (vem do `package.json`).
+- Mesclado com as mudanças anteriores deste repositório (beta.5 + fundo do menu) e com a preparação para a CrazyGames (beta.6).
+
+## 0.3.0-beta.6
+Requisitos mínimos da CrazyGames (Basic) — ver `docs/CRAZYGAMES.md`.
+- **SDK da CrazyGames (opcional, só dentro da plataforma):** carregamento/gameplay start-stop pareados, `happytime`, `muteAudio` com prioridade sobre o botão de som, locale do usuário e progresso no módulo Data.
+- **Teclas restritas:** pausa por ESC **ou Tab**; sair da tela cheia (ESC) pausa automaticamente.
+- **Mobile/tablet:** `user-select: none` no corpo (campo de digitação continua selecionável), retomada do áudio no iOS após interrupção, aviso em aparelhos só de toque (jogo é para teclado).
+- **Testes de conformidade:** tamanho/quantidade de arquivos, caminhos relativos, sem links externos/anúncios/tela cheia própria, física igual em 30/60/144/165 Hz, eventos de gameplay pareados.
+- **Capas** 1920×1080, 800×1200 e 800×800 em `docs/crazygames/` (`scripts/make_covers.py`) e checklist de submissão.
+
 ## 0.3.0-beta.5
 Resposta ao diagnóstico de publicação.
 - **Interface completa em inglês e português** (`src/i18n/`): menus, opções, HUD, resultados, XP, metas, conquistas, toasts, banners, dica de erro, contagem, histórico e mensagens de importação. Primeira visita usa o idioma do navegador (não-português → inglês); botões EN/PT no topo do menu e o seletor de idioma trocam tudo na hora. Testes garantem chaves iguais nos dois idiomas, nenhum texto em português no modo inglês e nenhum texto novo do HTML sem tradução.

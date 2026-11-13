@@ -1,8 +1,8 @@
 {
   "name": "velocity-type",
-  "version": "0.3.0-beta.5",
+  "version": "0.3.0-beta.11",
   "private": true,
-  "description": "Jogo de corrida baseado em velocidade de digitação.",
+  "description": "Velocity Type — jogo de corrida movido a velocidade de digitação (PT/EN). Typing racing game.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,12 +10,21 @@
     "preview": "vite preview",
     "test": "node --test",
     "verify": "node scripts/verify-beta.mjs",
-    "check": "node scripts/verify-beta.mjs --quick"
+    "check": "node scripts/verify-beta.mjs --quick",
+    "cleanup": "node scripts/cleanup-legacy.mjs"
   },
   "devDependencies": {
     "vite": "^7.1.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
-  }
+  },
+  "keywords": [
+    "typing",
+    "racing",
+    "game",
+    "keyboard",
+    "html5",
+    "vite"
+  ]
 }

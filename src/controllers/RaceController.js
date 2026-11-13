@@ -16,6 +16,7 @@ import { AdaptiveDifficultyService } from '../services/AdaptiveDifficultyService
 import { RaceRecorder } from '../services/RaceRecorder.js';
 import { TypingDiagnostics } from '../services/TypingDiagnostics.js';
 import { Logger } from '../services/Logger.js';
+import { CrazyGamesService } from '../services/CrazyGamesService.js';
 import { t } from '../i18n/I18n.js';
 import { eventTitle } from '../ui/ProgressionView.js';
 import { skinsUnlockedBetween } from '../config/Unlocks.js';
@@ -61,6 +62,7 @@ export class RaceController {
         this.audio = services.audio ?? new AudioService();
         this.assets = services.assets ?? new AssetService();
         this.recorder = services.recorder ?? RaceRecorder;
+        this.platform = services.platform ?? CrazyGamesService; // gameplayStart/Stop, happytime (no-op fora da plataforma)
     }
 
     initialize() {
@@ -72,10 +74,14 @@ export class RaceController {
         this.ui.onReturnToMenu(() => this.returnToMenu());
         this.ui.onMuteToggle?.(() => this.ui.setMuted?.(this.audio.toggleMute()));
         this.ui.setMuted?.(this.audio.muted);
+        this.ui.setVolume?.(this.audio.volume);
+        this.ui.onVolumeChange?.(volume => this.audio.setVolume(volume));
+        this.ui.onSoundToggle?.(on => this.ui.setMuted?.(this.audio.setMuted(!on)));
 
         // ESC continua funcionando mesmo com o campo de texto desabilitado.
         this.globalKeyHandler = (event) => {
-            if (event.key === 'Escape' && (this.state.is(GamePhase.RACING) || this.state.is(GamePhase.PAUSED))) {
+            // ESC também sai da tela cheia (navegador); Tab é a alternativa. Ctrl/Cmd+W não é usado.
+            if ((event.key === 'Escape' || event.key === 'Tab') && (this.state.is(GamePhase.RACING) || this.state.is(GamePhase.PAUSED))) {
                 event.preventDefault();
                 event.stopPropagation();
                 this.togglePause();
@@ -91,6 +97,15 @@ export class RaceController {
             }
         };
         document.addEventListener('visibilitychange', this.visibilityHandler);
+
+        // Sair da tela cheia (ESC) no meio da corrida também pausa.
+        this.fullscreenHandler = () => {
+            if (!document.fullscreenElement && this.state.is(GamePhase.RACING)) {
+                Logger.info('race', 'pausa automática (saiu da tela cheia)');
+                this.togglePause();
+            }
+        };
+        document.addEventListener('fullscreenchange', this.fullscreenHandler);
     }
 
     // O conteúdo editável do jogo fica em public/data/words/phrases.json.
@@ -166,6 +181,7 @@ export class RaceController {
             this.raceSystem.setTypingSession(this.typingSession);
             TypingDiagnostics.log('race-start', { mode: settings.mode, difficulty: this.activeDifficulty.id || settings.difficulty, targetDistance: setup.targetDistance, phraseCount: phrases.length });
 
+            this.platform.gameplayStart();
             this.ui.playLaunch?.();
             this.audio.startEngine();
             this.ui.setRaceStatus('LIVE');
@@ -185,6 +201,7 @@ export class RaceController {
 
     abortRaceStart() {
         TypingDiagnostics.log('race-aborted', { phase: this.state.phase });
+        this.platform.gameplayStop();
         this.inputController?.disable();
         this.audio.stopEngine();
         this.clearRaceReferences();
@@ -298,6 +315,7 @@ export class RaceController {
 
         if (this.state.is(GamePhase.RACING)) {
             this.state.setPhase(GamePhase.PAUSED);
+            this.platform.gameplayStop();
             this.race.pause();
             this.typingSession?.pause();
             this.audio.stopEngine();
@@ -314,6 +332,7 @@ export class RaceController {
     resumeRace() {
         if (!this.race || !this.state.is(GamePhase.PAUSED)) return;
         this.state.setPhase(GamePhase.RACING);
+        this.platform.gameplayStart();
         this.race.resume();
         this.typingSession?.resume();
         this.audio.startEngine();
@@ -326,6 +345,7 @@ export class RaceController {
     returnToMenu() {
         if (this.starting) return;
         this.cancelFinishSequence();
+        this.platform.gameplayStop();
         this.inputController?.disable();
         this.race?.pause?.();
         this.audio.stopEngine();
@@ -383,6 +403,7 @@ export class RaceController {
         });
 
         this.state.setPhase(GamePhase.FINISHED);
+        this.platform.gameplayStop();
         this.turboShown = false;
         this.ui.setTurbo?.(false);
         session.finish();
@@ -438,6 +459,7 @@ export class RaceController {
     presentResults(summary) {
         const { result, isBest, progression, errors } = summary;
         this.ui.showResults(result, isBest, progression);
+        if (progression?.leveledUp || isBest) this.platform.happytime(); // celebração da plataforma, usada com parcimônia
         if (progression?.leveledUp) {
             this.audio.sfx('levelup');
             this.ui.toast?.(t('toast.levelup', { level: progression.levelAfter }), 'success');

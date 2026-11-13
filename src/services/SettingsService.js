@@ -1,10 +1,26 @@
 import { StorageService, StorageKeys } from './StorageService.js';
 import { I18n } from '../i18n/I18n.js';
+import { normalizeModeId } from '../config/RaceModes.js';
 
 const KEY = StorageKeys.settings;
+// Quatro níveis (como na tela de corrida) + automática. "very-easy" de versões antigas migra para Fácil.
+const MANUAL_DIFFICULTIES = ['easy', 'medium', 'hard', 'very-hard'];
+const DIFFICULTIES = ['adaptive', ...MANUAL_DIFFICULTIES]; // 'adaptive' = dificuldade automática
+const DIFFICULTY_LEGACY = { 'very-easy': 'easy' };
+// Último nível escolhido à mão: volta para ele quando a dificuldade automática é desligada.
+function normalizeManualDifficulty(value, fallback = 'medium') {
+  if (MANUAL_DIFFICULTIES.includes(value)) return value;
+  return DIFFICULTY_LEGACY[value] ?? fallback;
+}
+
+function normalizeDifficulty(value) {
+  if (DIFFICULTIES.includes(value)) return value;
+  return DIFFICULTY_LEGACY[value] ?? 'medium';
+}
+
 const DEFAULTS = Object.freeze({
   language: 'pt', categories: ['computing', 'science', 'people', 'code'],
-  difficulty: 'adaptive', mode: 'sprint', errorMode: 'strict', carSkin: 'classic',
+  difficulty: 'medium', manualDifficulty: 'medium', mode: 'short', errorMode: 'strict', carSkin: 'classic', quality: 'auto', pilotName: '', reduceMotion: false,
   rules: { accents: true, punctuation: true, caseSensitive: true, numbersExact: true }
 });
 
@@ -19,9 +35,13 @@ export class SettingsService {
         ...this.defaults(), ...raw,
         language: raw.language === 'en' ? 'en' : 'pt',
         categories: Array.isArray(raw.categories) ? raw.categories.filter(x => ['computing','science','people','code'].includes(x)) : [...DEFAULTS.categories],
-        difficulty: ['adaptive','very-easy','easy','medium','hard','very-hard'].includes(raw.difficulty) ? raw.difficulty : 'adaptive',
-        mode: ['sprint','endurance-5','endurance-10'].includes(raw.mode) ? raw.mode : 'sprint',
+        difficulty: normalizeDifficulty(raw.difficulty),
+        manualDifficulty: normalizeManualDifficulty(raw.manualDifficulty, normalizeManualDifficulty(raw.difficulty)),
+        mode: normalizeModeId(raw.mode),
         errorMode: raw.errorMode === 'free' ? 'free' : 'strict',
+        quality: ['high', 'low'].includes(raw.quality) ? raw.quality : 'auto',
+        pilotName: typeof raw.pilotName === 'string' ? raw.pilotName.replace(/[<>]/g, '').trim().slice(0, 16) : '',
+        reduceMotion: raw.reduceMotion === true,
         carSkin: ['classic','neon','gold','phantom','inferno'].includes(raw.carSkin) ? raw.carSkin : 'classic',
         rules: { ...DEFAULTS.rules, ...(raw.rules || {}) }
       };

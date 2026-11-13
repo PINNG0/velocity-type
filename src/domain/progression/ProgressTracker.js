@@ -70,7 +70,8 @@ export function ensureDay(state, dayKey) {
 
 export function isCountedRace(result) {
     const g = ProgressionConfig.goals;
-    return (Number(result.phrasesCompleted) || 0) >= g.countedMinPhrases && (Number(result.accuracy) || 0) >= g.countedMinAccuracy;
+    const enough = Number.isFinite(result.charsTyped) ? result.charsTyped >= g.countedMinChars : (Number(result.phrasesCompleted) || 0) >= g.countedMinPhrases;
+    return enough && (Number(result.accuracy) || 0) >= g.countedMinAccuracy;
 }
 
 function updateStreak(stats, dayKey) {
@@ -111,7 +112,8 @@ export function recordRace(state, result, { dayKey, now = new Date() }) {
     stats.phrases += phrases;
     stats.bestCombo = Math.max(stats.bestCombo, Number(result.bestCombo) || 0);
     if (accuracy >= g.speedAchievementMinAccuracy) stats.bestWpm = Math.max(stats.bestWpm, Math.floor(Math.min(Number(result.wpm) || 0, 250)));
-    if (phrases >= 3) {
+    const meaningful = Number.isFinite(result.charsTyped) ? result.charsTyped >= g.meaningfulChars : phrases >= 3;
+    if (meaningful) {
         stats.bestAccuracy = Math.max(stats.bestAccuracy, Math.floor(accuracy * 100));
         if (accuracy >= 1) stats.perfectRaces++;
     }

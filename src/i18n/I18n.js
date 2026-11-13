@@ -10,7 +10,8 @@ export class I18n {
 
     // Navegador em português → pt; qualquer outro → en. Sem navegador (testes/Node) → pt.
     static detect() {
-        const language = globalThis.window?.navigator?.language;
+        const sdkLocale = (() => { try { return globalThis.window?.CrazyGames?.SDK?.user?.systemInfo?.locale; } catch { return null; } })();
+        const language = sdkLocale || globalThis.window?.navigator?.language;
         if (!language) return 'pt';
         return /^pt/i.test(language) ? 'pt' : 'en';
     }

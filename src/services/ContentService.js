@@ -1,6 +1,6 @@
 import { Logger } from './Logger.js';
 
-export const FALLBACK_PACKS = {
+const FALLBACK_PACKS = {
     pt: { mixed: ['O computador transforma instruções em ações por meio de hardware e software.', 'Um algoritmo organiza passos claros para resolver um problema.'], computing: ['Ada Lovelace é lembrada como pioneira da programação.', 'Alan Turing ajudou a estabelecer fundamentos teóricos da computação.'], science: ['O efeito Joule transforma energia elétrica em calor ao atravessar uma resistência.'], people: ['Grace Hopper ajudou a aproximar a programação da linguagem humana.'], code: ['while (engine.isRunning()) { updateRace(); }', 'public class RaceController { }'] },
     en: { mixed: ['A computer turns instructions into actions through hardware and software.', 'An algorithm arranges clear steps to solve a problem.'], computing: ['Ada Lovelace is remembered as a pioneer of programming.', 'Alan Turing helped establish theoretical foundations of computing.'], science: ['The Joule effect converts electrical energy into heat through resistance.'], people: ['Grace Hopper helped bring programming closer to human language.'], code: ['while (engine.isRunning()) { updateRace(); }', 'public class RaceController { }'] }
 };

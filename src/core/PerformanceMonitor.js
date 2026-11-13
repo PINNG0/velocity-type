@@ -7,9 +7,16 @@ export class PerformanceMonitor {
         this.avgMs = 16.7; this.samples = 0; this.quality = 'high'; this.listeners = new Set();
     }
 
+    // "auto" = decide pelo tempo de quadro; "high"/"low" = escolha do jogador.
+    force(mode) {
+        this.forced = mode === 'high' || mode === 'low' ? mode : null;
+        if (this.forced && this.forced !== this.quality) { this.quality = this.forced; this.listeners.forEach(fn => fn(this.quality)); }
+    }
+
     onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
 
     sample(frameMs) {
+        if (this.forced) return;
         if (!Number.isFinite(frameMs) || frameMs <= 0 || frameMs > 250) return; // ignora abas em segundo plano/pausas
         this.avgMs += (frameMs - this.avgMs) * 0.05;
         if (++this.samples < this.minSamples) return;

@@ -21,6 +21,8 @@ export class Game {
         this.ui.initialize();
         this.raceController.initialize();
         this.perf.onChange(quality => this.ui.setQuality(quality));
+        this.ui.onQualityChange = mode => this.perf.force(mode);
+        this.perf.force(this.ui.getSettings().quality);
         this.loop.start();
         Logger.info('game', 'jogo iniciado');
     }

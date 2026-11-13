@@ -7,8 +7,8 @@ import { Logger } from './Logger.js';
 
 const fail = (code, message) => Object.assign(new Error(message), { code });
 
-export const BACKUP_SCHEMA = 2;
-export const BACKUP_MAX_BYTES = 5 * 1024 * 1024;
+const BACKUP_SCHEMA = 2;
+const BACKUP_MAX_BYTES = 5 * 1024 * 1024;
 
 // Exportação/importação do save completo (corridas + perfil + objetivos).
 export class BackupService {

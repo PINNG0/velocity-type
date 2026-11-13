@@ -148,12 +148,12 @@ test('corrida completa por RaceSystem: jogador digitando bem vence o modo Sprint
 
 test('rivais ficam alcançáveis em todas as dificuldades (fator limitado)', () => {
     for (const speed of [0.1, 0.58, 0.96, 1.44, 1.8, 99]) {
-        const setup = buildRaceSetup({ mode: 'endurance-10' }, GameConfig, { speed });
+        const setup = buildRaceSetup({ mode: 'long' }, GameConfig, { speed });
         assert.ok(setup.opponentSpeedFactor >= 0.88 && setup.opponentSpeedFactor <= 1.18);
-        assert.equal(setup.targetDistance, 10000);
+        assert.equal(setup.targetDistance, 5000);
         assert.ok(setup.raceConfig.opponents.every(o => o.skill <= 1));
     }
-    assert.equal(buildRaceSetup({ mode: 'inexistente' }, GameConfig, {}).targetDistance, 2400);
+    assert.equal(buildRaceSetup({ mode: 'inexistente' }, GameConfig, {}).targetDistance, 1000, 'modo desconhecido cai na corrida curta');
 });
 
 test('GameLoop: reinício não gera delta gigante e erro de quadro não derruba o loop', () => {
@@ -223,10 +223,10 @@ test('AudioService funciona sem WebAudio e persiste o mudo', () => {
 test('SettingsService volta aos padrões quando o salvo está corrompido ou inválido', () => {
     const env = installMemoryStorage({ 'velocity-type-settings-v2': '{{{' });
     try {
-        assert.equal(SettingsService.load().difficulty, 'adaptive');
+        assert.equal(SettingsService.load().difficulty, 'medium');
         env.api.store.set('velocity-type-settings-v2', JSON.stringify({ language: 'xx', mode: 'banana', categories: ['x'], difficulty: 'zzz' }));
         const s = SettingsService.load();
-        assert.equal(s.language, 'pt'); assert.equal(s.mode, 'sprint'); assert.equal(s.difficulty, 'adaptive');
+        assert.equal(s.language, 'pt'); assert.equal(s.mode, 'short'); assert.equal(s.difficulty, 'medium');
     } finally { env.restore(); }
 });
 

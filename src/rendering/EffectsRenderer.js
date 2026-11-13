@@ -9,12 +9,14 @@ export class EffectsRenderer {
         this.ctx = canvas?.getContext?.('2d') ?? null;
         this.width = 0; this.height = 0; this.dpr = 1;
         this.quality = 'high';
-        this.reducedMotion = Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        this.systemReduced = Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        this.reducedMotion = this.systemReduced;
         this.streaks = []; this.confetti = [];
         this.lastIntensity = -1;
     }
 
     setQuality(quality) { this.quality = quality; }
+    setReducedMotion(userChoice) { this.reducedMotion = this.systemReduced || Boolean(userChoice); }
 
     resize() {
         if (!this.ctx) return;

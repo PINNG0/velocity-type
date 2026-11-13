@@ -10,6 +10,8 @@ import { TypingDisplay } from './components/TypingDisplay.js';
 import { ProgressBar } from './components/ProgressBar.js';
 import { RecordsView } from './RecordsView.js';
 import { ProgressionView } from './ProgressionView.js';
+import { MenuView } from './MenuView.js';
+import { KeyboardNav } from './KeyboardNav.js';
 import { SettingsService } from '../services/SettingsService.js';
 import { Logger } from '../services/Logger.js';
 import { resolveSkin } from '../config/Unlocks.js';
@@ -42,17 +44,16 @@ export class UIManager {
         const ids = {
             start: 'start-race-button', language: 'content-language', difficulty: 'difficulty-mode', mode: 'race-mode',
             accents: 'rule-accents', punctuation: 'rule-punctuation', caseSensitive: 'rule-case', numbersExact: 'rule-numbers',
-            topicsSummary: 'topics-summary', rulesSummary: 'typing-rules-summary', menuDistance: 'menu-distance', resultConfig: 'result-config',
+            resultConfig: 'result-config',
             restart: 'restart-button', resultsMenu: 'results-menu-button', resume: 'resume-button', quitRace: 'quit-race-button', pause: 'pause-button',
             menuStatus: 'menu-status', raceStatus: 'race-status-text', raceTimeTop: 'race-time-top',
             recordDetailsToggle: 'record-details-toggle', recordDetails: 'record-details', openRecords: 'open-records-button',
-            recordsPanel: 'records-panel', recordsList: 'records-list', menuRecordsToggle: 'menu-records-toggle',
+            recordsPanel: 'records-panel', recordsList: 'records-list',
             menuRecordsPanel: 'menu-records-panel', menuRecordsList: 'menu-records-list', playerSummary: 'player-summary',
             exportRecords: 'export-records-button', importRecords: 'import-records-button', importRecordsFile: 'import-records-file',
             clearRecords: 'clear-records-button', raceModeLabel: 'race-mode-label',
             challenge: 'challenge-text', input: 'typing-input', typingConsole: 'typing-console',
             wpm: 'wpm-value', accuracy: 'accuracy-value', errors: 'errors-value', combo: 'combo-value',
-            time: 'race-time', position: 'race-position', distance: 'distance-value',
             progress: 'race-progress', progressLabel: 'progress-label', leaderboard: 'leaderboard-list',
             resultWpm: 'result-wpm', resultAccuracy: 'result-accuracy', resultErrors: 'result-errors', resultTime: 'result-time',
             resultSpeed: 'result-speed', resultPosition: 'result-position', resultPhrases: 'result-phrases', resultBest: 'result-best',
@@ -61,9 +62,11 @@ export class UIManager {
             effects: 'speed-effects', speedNeedle: 'speed-needle', speedNumber: 'speed-number', rpmNeedle: 'rpm-needle', gear: 'gear-value',
             // opcionais (novos recursos): ausência não impede o jogo de iniciar
             trackCanvas: 'track-canvas', sceneCanvas: 'scene-canvas', effectsCanvas: 'effects-canvas', raceBanner: 'race-banner', muteButton: 'mute-button',
-            announcer: 'sr-announcer', gapPill: 'gap-pill', onboardHint: 'onboard-hint', typingHint: 'typing-hint', errorMode: 'error-mode', skinPicker: 'skin-picker', resultInsights: 'result-insights', resultChart: 'result-chart', resultMisses: 'result-misses', toastRegion: 'toast-region',
+            announcer: 'sr-announcer', gapPill: 'gap-pill', onboardHint: 'onboard-hint', touchNotice: 'touch-notice', typingHint: 'typing-hint', errorMode: 'error-mode', skinPicker: 'skin-picker', resultInsights: 'result-insights', resultChart: 'result-chart', resultMisses: 'result-misses', toastRegion: 'toast-region',
             profileLevel: 'profile-level', profileXpFill: 'profile-xp-fill', profileXpBar: 'profile-xp-bar', profileXpLabel: 'profile-xp-label', profileTotalXp: 'profile-total-xp',
-            objectivesToggle: 'objectives-toggle', objectivesPanel: 'objectives-panel', dailyList: 'daily-list', longList: 'long-list',
+            objectivesPanel: 'objectives-panel', quickPlay: 'quick-play-button', autoDifficulty: 'auto-difficulty', profileName: 'profile-name', profileLevelText: 'profile-level-text',
+            progLevel: 'prog-level', progLevelTitle: 'prog-level-title', progXpFill: 'prog-xp-fill', progXpLabel: 'prog-xp-label',
+            pilotName: 'pilot-name', volumeSlider: 'volume-slider', volumeValue: 'volume-value', soundToggle: 'sound-toggle', reduceMotion: 'reduce-motion', qualityMode: 'quality-mode', dailyList: 'daily-list', longList: 'long-list',
             achievementsList: 'achievements-list', achievementsCount: 'achievements-count', xpHistoryList: 'xp-history-list',
             resultXp: 'result-xp', resultXpTotal: 'result-xp-total', resultXpFill: 'result-xp-fill', resultXpBreakdown: 'result-xp-breakdown',
             resultLevel: 'result-level', resultEvents: 'result-events', levelupBanner: 'levelup-banner'
@@ -75,8 +78,7 @@ export class UIManager {
 
         this.progressionView = new ProgressionView(this.elements, {
             escape: v => this.escape(v),
-            getSkin: () => SettingsService.load().carSkin,
-            setSkin: id => { SettingsService.save({ ...this.getSettings(), carSkin: id }); this.applySkin(id); }
+            getName: () => this.pilotName()
         });
         this.recordsView = new RecordsView(this.elements, {
             escape: v => this.escape(v),
@@ -87,6 +89,12 @@ export class UIManager {
         this.progressionView.bind();
 
         this.bindSettings();
+        this.keyboardNav = new KeyboardNav({ getContainer: () => this.navContainer() });
+        this.keyboardNav.bind();
+        this.menuView = new MenuView(this);
+        this.menuView.bind();
+        this.applyMotion();
+        this.menuView.refresh();
 
         this.carRenderer = new CarRenderer(this.elements.car);
         this.opponentRenderer = new OpponentRenderer(this.elements.opponents);
@@ -107,6 +115,10 @@ export class UIManager {
             requestAnimationFrame(() => { resizeQueued = false; this.resizeCanvases(); });
         });
 
+        // Aparelho só de toque (sem mouse/teclado): avisa que o jogo é para teclado físico.
+        const coarseOnly = Boolean(globalThis.matchMedia?.('(pointer: coarse)')?.matches) && !globalThis.matchMedia?.('(any-pointer: fine)')?.matches;
+        if (this.elements.touchNotice) this.elements.touchNotice.hidden = !coarseOnly;
+
         this.progressionView.renderMenu();
         Logger.info('ui', 'interface inicializada');
     }
@@ -118,6 +130,10 @@ export class UIManager {
         const e = this.elements;
         [e.language, e.difficulty, e.mode, e.errorMode, e.accents, e.punctuation, e.caseSensitive, e.numbersExact, ...e.topics].forEach(el => el?.addEventListener('change', save));
         e.language?.addEventListener('change', () => this.applyLanguage());
+        e.autoDifficulty?.addEventListener('change', () => this.setAutoDifficulty(e.autoDifficulty.checked));
+        e.pilotName?.addEventListener('input', () => { this.persistSettings(); this.progressionView?.renderMenu(); });
+        e.reduceMotion?.addEventListener('change', () => { this.persistSettings(); this.applyMotion(); });
+        e.qualityMode?.addEventListener('change', () => { this.persistSettings(); this.applyQuality(); });
         document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => {
             if (e.language) e.language.value = button.dataset.lang;
             this.persistSettings();
@@ -145,6 +161,11 @@ export class UIManager {
         if (e.difficulty) e.difficulty.value = saved.difficulty;
         if (e.mode) e.mode.value = saved.mode;
         if (e.errorMode) e.errorMode.value = saved.errorMode;
+        if (e.qualityMode) e.qualityMode.value = saved.quality;
+        this.manualDifficulty = saved.manualDifficulty;
+        if (e.autoDifficulty) e.autoDifficulty.checked = saved.difficulty === 'adaptive';
+        if (e.pilotName) e.pilotName.value = saved.pilotName;
+        if (e.reduceMotion) e.reduceMotion.checked = saved.reduceMotion === true;
         this.carSkin = saved.carSkin;
         e.topics.forEach(input => { input.checked = input.value === 'mixed' ? saved.categories.length === 4 : saved.categories.includes(input.value); });
         for (const key of ['accents', 'punctuation', 'caseSensitive', 'numbersExact']) if (e[key]) e[key].checked = saved.rules[key] !== false;
@@ -157,15 +178,58 @@ export class UIManager {
         return {
             language: e.language?.value || 'pt',
             categories: selected.length ? selected : ['computing', 'science', 'people', 'code'],
-            difficulty: e.difficulty?.value || 'adaptive',
-            mode: e.mode?.value || 'sprint',
+            difficulty: e.difficulty?.value || 'medium',
+            manualDifficulty: this.manualDifficulty || 'medium',
+            mode: e.mode?.value || 'short',
             errorMode: e.errorMode?.value === 'free' ? 'free' : 'strict',
+            quality: ['high', 'low'].includes(e.qualityMode?.value) ? e.qualityMode.value : 'auto',
+            pilotName: String(e.pilotName?.value ?? '').replace(/[<>]/g, '').trim().slice(0, 16),
+            reduceMotion: e.reduceMotion?.checked === true,
             carSkin: this.carSkin || 'classic',
             rules: {
                 accents: e.accents?.checked !== false, punctuation: e.punctuation?.checked !== false,
                 caseSensitive: e.caseSensitive?.checked !== false, numbersExact: e.numbersExact?.checked !== false
             }
         };
+    }
+
+    // Dificuldade automática: liga guardando o último nível manual; desliga voltando a ele.
+    setAutoDifficulty(on) {
+        const select = this.elements.difficulty;
+        if (!select) return;
+        if (on) { if (select.value !== 'adaptive') this.manualDifficulty = select.value; select.value = 'adaptive'; }
+        else select.value = this.manualDifficulty || 'medium';
+        this.persistSettings();
+    }
+
+    // Escolher um nível à mão desliga a automática.
+    chooseDifficulty(level) {
+        this.manualDifficulty = level;
+        if (this.elements.difficulty) this.elements.difficulty.value = level;
+        this.persistSettings();
+    }
+
+    pilotName() { return this.elements.pilotName?.value?.replace(/[<>]/g, '').trim() || t('profile.defaultName'); }
+
+    // Reduzir movimento: preferência do jogador somada à do sistema (prefers-reduced-motion).
+    applyMotion() {
+        const reduced = this.elements.reduceMotion?.checked === true;
+        const root = globalThis.document?.documentElement;
+        if (root?.setAttribute) root.setAttribute('data-motion', reduced ? 'reduced' : 'full');
+        this.effectsRenderer?.setReducedMotion(reduced);
+    }
+
+    // Qualidade visual: "auto" deixa o monitor de desempenho decidir; "high"/"low" força.
+    applyQuality() {
+        const mode = this.getSettings().quality;
+        this.onQualityChange?.(mode);
+        if (mode !== 'auto') this.setQuality(mode);
+    }
+
+    equipSkin(id) {
+        SettingsService.save({ ...this.getSettings(), carSkin: id });
+        this.carSkin = id;
+        this.applySkin(id);
     }
 
     // Troca o idioma de toda a interface (HTML estático via data-i18n + textos gerados por código).
@@ -187,6 +251,7 @@ export class UIManager {
         if (e.pause) e.pause.textContent = t(e.pauseOverlay && !e.pauseOverlay.hidden ? 'race.resume' : 'race.pause');
         this.progressionView?.refreshLabels();
         this.recordsView?.refreshLabels();
+        this.menuView?.refresh();
         this.hintKey = '';
     }
 
@@ -195,16 +260,8 @@ export class UIManager {
         this.refreshSettingsSummaries();
     }
 
-    refreshSettingsSummaries() {
-        const e = this.elements;
-        const chosen = e.topics.filter(i => i.checked && i.value !== 'mixed' && i.value !== 'all');
-        if (e.topicsSummary) e.topicsSummary.textContent = chosen.length === 4 ? t('topics.all') : t('topics.count', { n: chosen.length });
-        if (e.rulesSummary) {
-            const r = this.getSettings().rules;
-            e.rulesSummary.textContent = t(Object.values(r).every(Boolean) ? 'rules.full' : Object.values(r).every(v => !v) ? 'rules.simple' : 'rules.custom');
-        }
-        if (e.menuDistance && e.mode) e.menuDistance.textContent = getRaceMode(e.mode.value).km;
-    }
+    // Resumo/prévia e chips do menu refletem sempre o estado atual dos controles.
+    refreshSettingsSummaries() { this.menuView?.refresh(); }
 
     applyRulePreset(preset) {
         const value = preset === 'full';
@@ -247,12 +304,31 @@ export class UIManager {
         screen.classList.add('active');
     }
 
-    onStartRace(cb) { this.elements.start.addEventListener('click', cb); }
+    onStartRace(cb) { this.elements.start.addEventListener('click', cb); this.elements.quickPlay?.addEventListener('click', cb); }
+
+    // Onde as setas atuam agora: pausa > resultados > menu (submenu ou início). Na corrida: nenhum (a digitação é livre).
+    navContainer() {
+        const e = this.elements;
+        if (e.pauseOverlay && !e.pauseOverlay.hidden) return e.pauseOverlay;
+        if (this.screens.results && !this.screens.results.hidden) return this.screens.results;
+        if (this.screens.menu && !this.screens.menu.hidden) {
+            const sub = document.getElementById('menu-subscreen');
+            return sub && !sub.hidden ? sub : document.getElementById('menu-home');
+        }
+        return null;
+    }
     onRestart(cb) { this.elements.restart.addEventListener('click', cb); }
     onPause(cb) { this.elements.pause.addEventListener('click', cb); }
     onResume(cb) { this.elements.resume.addEventListener('click', cb); }
     onQuitRace(cb) { this.elements.quitRace.addEventListener('click', cb); }
     onReturnToMenu(cb) { this.elements.resultsMenu.addEventListener('click', cb); }
+    onVolumeChange(cb) { this.elements.volumeSlider?.addEventListener('input', () => { const v = Number(this.elements.volumeSlider.value) / 100; this.setVolume(v); cb(v); }); }
+    onSoundToggle(cb) { this.elements.soundToggle?.addEventListener('change', () => cb(this.elements.soundToggle.checked)); }
+    setVolume(volume) {
+        const percent = Math.round(Math.min(1, Math.max(0, volume)) * 100);
+        if (this.elements.volumeSlider) this.elements.volumeSlider.value = String(percent);
+        if (this.elements.volumeValue) this.elements.volumeValue.textContent = `${percent}%`;
+    }
     onMuteToggle(cb) { this.elements.muteButton?.addEventListener('click', cb); }
     getTypingInput() { return this.elements.input; }
 
@@ -270,7 +346,9 @@ export class UIManager {
         this.elements.start.textContent = t('menu.start');
         this.effectsRenderer.clear();
         this.progressionView.renderMenu();
-        this.elements.start.focus?.();
+        if (this.elements.quickPlay) this.elements.quickPlay.disabled = false;
+        this.menuView?.showHome();
+        this.menuView?.focusHome();
     }
 
     showMenuError(message) {
@@ -282,6 +360,7 @@ export class UIManager {
     setMenuLoading(loading) {
         this.menuBusy = loading;
         this.elements.start.disabled = loading;
+        if (this.elements.quickPlay) { this.elements.quickPlay.disabled = loading; this.elements.quickPlay.setAttribute('aria-busy', String(loading)); }
         this.elements.start.textContent = t(loading ? 'menu.preparing' : 'menu.start');
         this.elements.menuStatus.textContent = t(loading ? 'menu.loading' : 'menu.ready');
     }
@@ -379,6 +458,7 @@ export class UIManager {
 
     setMuted(muted) {
         this.mutedState = muted;
+        if (this.elements.soundToggle) this.elements.soundToggle.checked = !muted;
         const button = this.elements.muteButton;
         if (!button) return;
         button.setAttribute('aria-pressed', String(muted));
@@ -467,9 +547,6 @@ export class UIManager {
         this.leaderboardKey = '';
         e.wpm.textContent = '0'; e.accuracy.textContent = '100%'; e.errors.textContent = '0'; e.combo.textContent = '0x';
         e.speedNumber.textContent = '0';
-        if (e.time) e.time.textContent = '0.0s';
-        if (e.distance) e.distance.textContent = '0 m';
-        if (e.position) e.position.textContent = '4/4';
         e.progressLabel.textContent = '0%';
         e.gear.textContent = 'N';
         e.speedNeedle.style.setProperty('--needle', '-132deg');
@@ -619,10 +696,7 @@ export class UIManager {
         if (hudDue) {
             this.lastHudAt = now;
             const t = `${race.elapsedSeconds.toFixed(1)}s`;
-            this.setText('time', e.time, t);
             this.setText('timeTop', e.raceTimeTop, t);
-            this.setText('distance', e.distance, `${Math.round(race.car.position)} m`);
-            this.setText('position', e.position, `${race.playerPosition}/4`);
             this.setText('progressLabel', e.progressLabel, `${Math.round(race.progress * 100)}%`);
             this.setText('wpm', e.wpm, Math.round(session.wpm || 0));
             this.setText('accuracy', e.accuracy, `${Math.round(session.accuracy * 100)}%`);

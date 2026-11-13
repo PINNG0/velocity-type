@@ -25,8 +25,8 @@ export const ACHIEVEMENTS = Object.freeze([
     { id: 'speed-80', category: 'speed', title: 'Pé no fundo', description: '80 WPM em uma corrida', metric: 'bestWpm', target: 80, rewardXp: 150 },
     { id: 'speed-100', category: 'speed', title: 'Barreira dos 100', description: '100 WPM em uma corrida', metric: 'bestWpm', target: 100, rewardXp: 300 },
     // Precisão
-    { id: 'acc-98', category: 'accuracy', title: 'Cirúrgico', description: '98% de precisão em corrida de 3+ frases', metric: 'bestAccuracy', target: 98, rewardXp: 80 },
-    { id: 'acc-100', category: 'accuracy', title: 'Corrida perfeita', description: '100% de precisão em corrida de 3+ frases', metric: 'perfectRaces', target: 1, rewardXp: 200 },
+    { id: 'acc-98', category: 'accuracy', title: 'Cirúrgico', description: '98% de precisão em uma corrida de 200+ caracteres', metric: 'bestAccuracy', target: 98, rewardXp: 80 },
+    { id: 'acc-100', category: 'accuracy', title: 'Corrida perfeita', description: '100% de precisão em uma corrida de 200+ caracteres', metric: 'perfectRaces', target: 1, rewardXp: 200 },
     // Consistência
     { id: 'clean-5', category: 'consistency', title: 'Cinco limpas', description: '5 corridas seguidas com 95%+', metric: 'cleanStreak', target: 5, rewardXp: 150 },
     { id: 'streak-3', category: 'consistency', title: 'Hábito', description: 'Jogue 3 dias seguidos', metric: 'streakDays', target: 3, rewardXp: 100 },

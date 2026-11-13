@@ -14,7 +14,8 @@ export const ProgressionConfig = Object.freeze({
         accuracyMax: 40,
         positionBonus: Object.freeze({ 1: 50, 2: 25, 3: 10 }),
         recordBonus: 30,
-        minPhrases: 2,            // corridas curtas demais viram "baixa qualidade"
+        minPhrases: 2,            // (registros antigos, sem contagem de caracteres)
+        minChars: 80,             // corridas curtas demais viram "baixa qualidade" (~16 palavras)
         minAccuracy: 0.5,
         lowQualityFactor: 0.25,
         freeRepeats: 2,           // repetições da mesma configuração no dia sem desconto
@@ -24,7 +25,9 @@ export const ProgressionConfig = Object.freeze({
     goals: Object.freeze({
         dailyCount: 3,
         dailyAllBonusXp: 50,
-        countedMinPhrases: 2,
+        countedMinPhrases: 2,      // (registros antigos)
+        countedMinChars: 80,
+        meaningfulChars: 200,      // precisão perfeita/98% só valem em corridas com este tamanho
         countedMinAccuracy: 0.5,
         speedAchievementMinAccuracy: 0.85
     }),

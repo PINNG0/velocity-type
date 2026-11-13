@@ -5,11 +5,11 @@ const LEVELS = [
   { id: 'very-easy', label: 'Muito fácil', speed: 0.58 },
   { id: 'easy', label: 'Fácil', speed: 0.72 },
   { id: 'easy-medium', label: 'Fácil–Médio', speed: 0.84 },
-  { id: 'medium', label: 'Médio', speed: 0.96 },
+  { id: 'medium', label: 'Normal', speed: 0.96 },
   { id: 'medium-hard', label: 'Médio–Difícil', speed: 1.08 },
   { id: 'hard', label: 'Difícil', speed: 1.20 },
   { id: 'hard-very-hard', label: 'Difícil–Muito difícil', speed: 1.32 },
-  { id: 'very-hard', label: 'Muito difícil', speed: 1.44 },
+  { id: 'very-hard', label: 'Expert', speed: 1.44 },
   { id: 'expert', label: 'Especialista+', speed: 1.56 }
 ];
 const FIXED = { 'very-easy': 0.58, easy: 0.72, medium: 0.96, hard: 1.20, 'very-hard': 1.44 };
@@ -26,7 +26,7 @@ export class AdaptiveDifficultyService {
   static choose(mode) {
     if (mode !== 'adaptive') {
       const speed = FIXED[mode] ?? FIXED.medium;
-      return { mode, levelIndex: Object.keys(FIXED).indexOf(mode), label: ({'very-easy':'Muito fácil',easy:'Fácil',medium:'Médio',hard:'Difícil','very-hard':'Muito difícil'})[mode] || 'Médio', speed };
+      return { mode, levelIndex: Object.keys(FIXED).indexOf(mode), label: ({'very-easy':'Muito fácil',easy:'Fácil',medium:'Normal',hard:'Difícil','very-hard':'Expert'})[mode] || 'Normal', speed };
     }
     const index = this.getSkillIndex();
     const level = this.levelForIndex(index) || LEVELS[1];

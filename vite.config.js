@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 // Recebe eventos de diagnóstico do navegador e os imprime no terminal do npm run dev.
 function velocityDebugTerminal() {
@@ -37,4 +40,4 @@ function velocityDebugTerminal() {
 }
 
 // base './' => o build funciona em qualquer subpasta/host estático (GitHub Pages, itch.io, etc.).
-export default defineConfig({ base: './', plugins: [velocityDebugTerminal()] });
+export default defineConfig({ base: './', define: { __APP_VERSION__: JSON.stringify(pkg.version) }, plugins: [velocityDebugTerminal()] });

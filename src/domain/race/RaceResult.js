@@ -1,6 +1,7 @@
 export class RaceResult {
     constructor({
         id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        charsTyped = undefined,
         wpmSeries = [],
         topMisses = [],
         wpm,
@@ -16,7 +17,7 @@ export class RaceResult {
         difficultyMode = 'medium',
         difficultyLabel = 'Médio',
         difficultySpeed = 0.96,
-        modeLabel = 'Sprint · 2,4 km',
+        modeLabel = 'Curta · 1 km',
         language = 'pt',
         categories = [],
         rules = {},
@@ -24,6 +25,7 @@ export class RaceResult {
         date = new Date().toISOString()
     }) {
         this.id = id;
+        if (charsTyped !== undefined) this.charsTyped = charsTyped;
         this.wpmSeries = wpmSeries;
         this.topMisses = topMisses;
         this.wpm = wpm;

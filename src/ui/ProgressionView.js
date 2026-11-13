@@ -1,38 +1,20 @@
 import { ProgressionService } from '../services/ProgressionService.js';
 import { Logger } from '../services/Logger.js';
-import { CarSkins, resolveSkin } from '../config/Unlocks.js';
 import { I18n, t } from '../i18n/I18n.js';
 
 const fmt = n => Number(n).toLocaleString(I18n.lang === 'en' ? 'en-US' : 'pt-BR');
-export const goalText = (id, field, fallback) => t(`goal.${id}.${field}`, null, fallback);
+const goalText = (id, field, fallback) => t(`goal.${id}.${field}`, null, fallback);
 const eventTitle = ev => ev.type === 'daily-all' ? t('goal.daily-all.title') : goalText(ev.id, 'title', ev.title);
 export { eventTitle };
 
 // Perfil/XP/objetivos/conquistas + notificações (toasts).
 export class ProgressionView {
-    constructor(elements, { escape, getSkin = () => 'classic', setSkin = () => {} }) {
-        this.el = elements; this.escape = escape; this.getSkin = getSkin; this.setSkin = setSkin; this.toastCount = 0;
-    }
-
-    renderSkins(level) {
-        const picker = this.el.skinPicker;
-        if (!picker) return;
-        const current = resolveSkin(this.getSkin(), level);
-        picker.innerHTML = CarSkins.map(s => {
-            const locked = level < s.level;
-            const name = this.escape(t(`skin.${s.id}`, null, s.name));
-            return `<button type="button" class="skin-chip${s.id === current ? ' selected' : ''}" data-skin="${s.id}" role="radio" aria-checked="${s.id === current}" ${locked ? 'disabled' : ''} title="${locked ? this.escape(t('skin.locked', { level: s.level })) : name}"><i class="skin-dot skin-${s.id}"></i>${name}${locked ? ` <small>${this.escape(t('xp.levelShort', { n: s.level }))}</small>` : ''}</button>`;
-        }).join('');
+    constructor(elements, { escape, getName = () => '' }) {
+        this.el = elements; this.escape = escape; this.getName = getName; this.toastCount = 0;
     }
 
     bind() {
         const el = this.el;
-        el.skinPicker?.addEventListener('click', event => {
-            const button = event.target?.closest?.('[data-skin]');
-            if (!button || button.disabled) return;
-            this.setSkin(button.dataset.skin);
-            this.renderMenu();
-        });
         el.objectivesToggle?.addEventListener('click', () => {
             const panel = el.objectivesPanel;
             panel.hidden = !panel.hidden;
@@ -54,11 +36,16 @@ export class ProgressionView {
         this.safe(() => {
             const el = this.el, o = ProgressionService.getOverview(), p = o.profile;
             if (el.profileLevel) el.profileLevel.textContent = p.level;
+            if (el.profileLevelText) el.profileLevelText.textContent = p.level;
+            if (el.profileName) el.profileName.textContent = this.getName();
+            if (el.progLevel) el.progLevel.textContent = p.level;
+            if (el.progLevelTitle) el.progLevelTitle.textContent = t('prog.level', { n: p.level });
+            if (el.progXpFill) el.progXpFill.style.width = `${Math.round(p.progress * 100)}%`;
+            if (el.progXpLabel) el.progXpLabel.textContent = p.maxed ? t('xp.maxed') : `${fmt(p.xpIntoLevel)} / ${fmt(p.xpForNext)} XP · ${t('xp.total', { xp: fmt(p.totalXp) })}`;
             if (el.profileXpFill) el.profileXpFill.style.width = `${Math.round(p.progress * 100)}%`;
             if (el.profileXpBar) el.profileXpBar.setAttribute('aria-valuenow', String(Math.round(p.progress * 100)));
             if (el.profileXpLabel) el.profileXpLabel.textContent = p.maxed ? t('xp.maxed') : `${fmt(p.xpIntoLevel)} / ${fmt(p.xpForNext)} XP`;
             if (el.profileTotalXp) el.profileTotalXp.textContent = t('xp.total', { xp: fmt(p.totalXp) });
-            this.renderSkins(p.level);
             if (el.objectivesPanel && !el.objectivesPanel.hidden) this.renderObjectives(o);
         }, 'renderMenu');
     }

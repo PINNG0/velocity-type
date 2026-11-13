@@ -76,8 +76,8 @@ test('painel de objetivos mostra desafios do dia, longo prazo, conquistas e hist
         await t.controller.startRace();
         drive(t.controller, t.state);
         t.dom.el('results-menu-button').click();
-        t.dom.el('objectives-toggle').click();
-        assert.equal(t.dom.el('objectives-panel').hidden, false);
+        t.ui.menuView.open('progression');
+        assert.equal(t.dom.el('menu-subscreen').hidden, false);
         assert.equal((t.dom.el('daily-list').innerHTML.match(/goal-row/g) || []).length, 3);
         assert.ok(t.dom.el('long-list').innerHTML.includes('goal-row'));
         assert.match(t.dom.el('achievements-count').textContent, /^\d+\/\d+$/);

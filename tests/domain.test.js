@@ -422,7 +422,7 @@ test('menu oferece acesso ao histórico, exportação e limpeza dos recordes', a
   const { readFile } = await import('node:fs/promises');
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const ui = await readFile(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
-  for (const id of ['menu-records-toggle', 'menu-records-panel', 'player-summary', 'menu-records-list', 'export-records-button', 'clear-records-button']) {
+  for (const id of ['menu-subscreen', 'menu-records-panel', 'player-summary', 'menu-records-list', 'export-records-button', 'clear-records-button']) {
     assert.match(html, new RegExp(`id=["']${id}["']`), `HTML deve conter #${id}`);
   }
   assert.match(ui, /renderMenuRecords\(\)/);

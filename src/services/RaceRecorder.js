@@ -3,7 +3,7 @@ import { StorageService } from './StorageService.js';
 import { AdaptiveDifficultyService } from './AdaptiveDifficultyService.js';
 import { ProgressionService } from './ProgressionService.js';
 import { Logger } from './Logger.js';
-import { bus } from '../core/EventBus.js';
+import { RaceModes } from '../config/RaceModes.js';
 
 const MAX_STORED_WPM = 500;
 
@@ -36,10 +36,11 @@ export class RaceRecorder {
             difficultyMode: context.settings?.difficulty || 'medium',
             difficultyLabel: context.difficulty?.label || 'Médio',
             difficultySpeed: context.difficulty?.speed || 0.96,
-            modeLabel: context.modeLabel || 'Sprint · 2,4 km',
+            modeLabel: context.modeLabel || RaceModes.short.label,
             language: context.settings?.language || 'pt',
             categories: context.settings?.categories || [],
             rules: context.settings?.rules || {},
+            charsTyped: session.correctCharacters,
             distance: race.targetDistance,
             wpmSeries: context.wpmSeries || [],
             topMisses: session.topMisses ? session.topMisses(5) : [],
@@ -53,7 +54,6 @@ export class RaceRecorder {
 
         Logger.info('recorder', 'corrida registrada', { id: result.id, position: result.position, wpm: Math.round(result.wpm), accuracy: +result.accuracy.toFixed(3), history, isBest, xp: progression?.xpGained ?? null, errors: errors.length });
         const summary = { result, isBest, progression, errors };
-        bus.emit('race:recorded', summary);
         return summary;
     }
 }

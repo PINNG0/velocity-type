@@ -44,7 +44,9 @@ export function calculateRaceReward(result, context = {}, cfg = ProgressionConfi
     const accuracy = clamp(Number(result.accuracy) || 0, 0, 1);
     const distanceFactor = clamp((Number(result.distance) || 2400) / 2400, 0.5, 4.5);
     const diffFactor = clamp(0.8 + ((Number(result.difficultySpeed) || 0.96) - 0.58) * 0.45, 0.8, 1.4);
-    const lowQuality = (Number(result.phrasesCompleted) || 0) < cfg.minPhrases || accuracy < cfg.minAccuracy;
+    // Conta caracteres digitados (uma corrida de 1 km pode ter só 1–2 frases longas); registros antigos usam frases.
+    const enough = Number.isFinite(result.charsTyped) ? result.charsTyped >= cfg.minChars : (Number(result.phrasesCompleted) || 0) >= cfg.minPhrases;
+    const lowQuality = !enough || accuracy < cfg.minAccuracy;
 
     const parts = [{ id: 'participation', label: 'Participação', xp: cfg.participation * distanceFactor * (lowQuality ? cfg.lowQualityFactor : 1) }];
     if (lowQuality) flags.push('low-quality');

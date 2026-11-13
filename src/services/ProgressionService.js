@@ -1,7 +1,6 @@
 import { StorageService, StorageKeys } from './StorageService.js';
 import { ProfileService } from './ProfileService.js';
 import { Logger } from './Logger.js';
-import { bus } from '../core/EventBus.js';
 import { PlayerProfile } from '../domain/progression/PlayerProfile.js';
 import { calculateRaceReward, levelFromXp, raceFingerprint } from '../domain/progression/XpCalculator.js';
 import { createProgressState, sanitizeProgressState, recordRace, localDayKey } from '../domain/progression/ProgressTracker.js';
@@ -53,8 +52,6 @@ export class ProgressionService {
             before, after, persisted: savedProfile && savedProgress
         };
         Logger.info('progress', 'XP concedido', { raceId: result.id, xp: outcome.xpGained, flags: reward.flags, level: `${before.level}→${after.level}`, events: events.map(e => e.id) });
-        if (outcome.leveledUp) bus.emit('progress:levelup', outcome);
-        for (const ev of events) if (ev.type === 'achievement') bus.emit('progress:achievement', ev);
         return outcome;
     }
 

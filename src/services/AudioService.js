@@ -15,32 +15,49 @@ export class AudioService {
         this.lastEngineUpdate = 0;
         const saved = StorageService.get(StorageKeys.audio, {}) || {};
         this.muted = saved.muted === true;
+        this.externalMuted = false; // muteAudio da plataforma: prevalece sobre o botão de som
         this.volume = clamp01(saved.volume ?? 0.7);
     }
 
     initialize() {
+        this.bindGestureResume();
         if (this.context) { this.resume(); return; }
         const Ctx = globalThis.window?.AudioContext || globalThis.window?.webkitAudioContext;
         if (!Ctx) { Logger.warn('audio', 'WebAudio indisponível: jogo seguirá sem som'); return; }
         try {
             this.context = new Ctx();
             this.master = this.context.createGain();
-            this.master.gain.value = this.muted ? 0 : this.volume;
+            this.master.gain.value = this.silent ? 0 : this.volume;
             this.master.connect(this.context.destination);
             Logger.info('audio', 'contexto de áudio criado', { muted: this.muted, volume: this.volume });
         } catch (error) { Logger.error('audio', 'falha ao criar AudioContext', { error: String(error) }); this.context = null; }
     }
 
+    get silent() { return this.muted || this.externalMuted; }
+
+    // iOS pode deixar o contexto "interrupted"/"suspended" (ligação, troca de app): retoma no próximo gesto.
     resume() {
-        if (this.context?.state === 'suspended') this.context.resume().catch(() => {});
+        if (['suspended', 'interrupted'].includes(this.context?.state)) this.context.resume().catch(() => {});
     }
+
+    bindGestureResume() {
+        if (this.gestureBound || typeof document === 'undefined') return;
+        this.gestureBound = true;
+        for (const type of ['touchend', 'pointerdown', 'keydown']) document.addEventListener(type, () => this.resume(), { passive: true });
+    }
+
+    applyGain() {
+        if (this.master) this.master.gain.value = this.silent ? 0 : this.volume;
+        if (this.silent) this.stopEngine();
+    }
+
+    setExternalMute(muted) { this.externalMuted = Boolean(muted); this.applyGain(); }
 
     persist() { StorageService.set(StorageKeys.audio, { muted: this.muted, volume: this.volume }); }
 
     setMuted(muted) {
         this.muted = Boolean(muted);
-        if (this.master) this.master.gain.value = this.muted ? 0 : this.volume;
-        if (this.muted) this.stopEngine();
+        this.applyGain();
         this.persist();
         return this.muted;
     }
@@ -49,12 +66,12 @@ export class AudioService {
 
     setVolume(volume) {
         this.volume = clamp01(volume);
-        if (this.master && !this.muted) this.master.gain.value = this.volume;
+        if (this.master && !this.silent) this.master.gain.value = this.volume;
         this.persist();
     }
 
     tone(frequency = 440, duration = 0.08, { type = 'sine', gain = 0.05, slideTo = null, delay = 0 } = {}) {
-        if (!this.context || !this.master || this.muted) return;
+        if (!this.context || !this.master || this.silent) return;
         try {
             const t0 = this.context.currentTime + delay;
             const osc = this.context.createOscillator();
@@ -96,7 +113,7 @@ export class AudioService {
     }
 
     startEngine() {
-        if (!this.context || !this.master || this.engine || this.muted) return;
+        if (!this.context || !this.master || this.engine || this.silent) return;
         try {
             const osc = this.context.createOscillator();
             const filter = this.context.createBiquadFilter();

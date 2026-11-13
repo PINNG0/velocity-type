@@ -28,7 +28,7 @@ export function makeElement(id = '') {
         click() { el.dispatch('click'); }, focus() {}, blur() {}, remove() { const p = el.parentNode; if (p) p.children.splice(p.children.indexOf(el), 1); }, matches: () => false,
         setAttribute(k, v) { el.attrs[k] = String(v); }, getAttribute: k => el.attrs[k],
         appendChild(child) { child.parentNode = el; el.children.push(child); return child; }, querySelectorAll: () => [], querySelector: () => null,
-        getBoundingClientRect: () => ({ width: 800, height: 300 }), getContext: () => ctx, setRangeText() {}, dispatchEvent() {}
+        getBoundingClientRect: () => ({ width: 800, height: 300 }), getContext: () => ctx, setRangeText() {}, dispatchEvent(event) { el.dispatch(event.type, event); }, closest: () => null, setSelectionRange() {}
     };
     return el;
 }
@@ -42,6 +42,14 @@ function i18nElements() {
     for (const m of html.matchAll(/<(\w+)[^>]*\sdata-i18n-attr="([^"]+)"[^>]*>/g)) {
         const el = makeElement(); el.attrs['data-i18n-attr'] = m[2]; out.attr.push(el);
     }
+    // grupos do menu (chips, seções, abas): elementos com dataset lido do HTML
+    out.groups = {};
+    for (const attr of ['data-chips', 'data-section', 'data-settings-tab', 'data-settings-panel']) {
+        out.groups[attr] = [...html.matchAll(new RegExp(`<\\w+[^>]*\\s${attr}="([^"]+)"[^>]*>`, 'g'))].map(m => {
+            const el = makeElement(); el.dataset[attr.replace('data-', '').replace(/-(\w)/g, (_, c) => c.toUpperCase())] = m[1];
+            el.hidden = /\shidden(\s|>|=)/.test(m[0]); return el;
+        });
+    }
     return out;
 }
 
@@ -52,16 +60,20 @@ export function installFakeDom() {
     const documentStub = {
         hidden: false, body: makeElement('body'), documentElement: makeElement('html'), activeElement: null,
         getElementById: id => elements.get(id) ?? null,
-        querySelectorAll: selector => selector === '[data-content-category]' ? topics : selector === '[data-i18n]' ? i18n.text : selector === '[data-i18n-attr]' ? i18n.attr : [],
-        createElement: () => makeElement(), addEventListener() {}, removeEventListener() {}
+        querySelectorAll: selector => selector === '[data-content-category]' ? topics : selector === '[data-i18n]' ? i18n.text : selector === '[data-i18n-attr]' ? i18n.attr : (selector.startsWith('[data-') && i18n.groups[selector.slice(1, -1)]) || [],
+        createElement: () => makeElement(), addEventListener(type, fn) { (docListeners[type] ??= []).push(fn); }, removeEventListener() {}
     };
     const i18n = i18nElements();
+    const docListeners = {};
     const alerts = [];
     globalThis.document = documentStub;
     globalThis.window = { addEventListener() {}, confirm: () => true, alert: m => alerts.push(m) };
     globalThis.requestAnimationFrame = cb => { cb(0); return 1; };
     return {
         el: id => elements.get(id), elements, topics, alerts, i18n,
+        // simula um clique em um elemento do menu por delegação (target.closest(seletor) → dataset)
+        click(selector, dataset = {}) { elements.get('main-menu').dispatch('click', { target: { closest: s => (s === selector ? { dataset, disabled: false } : null) } }); },
+        key(key, extra = {}) { const event = { key, prevented: false, defaultPrevented: false, preventDefault() { this.prevented = true; }, stopPropagation() {}, ...extra }; for (const fn of docListeners.keydown ?? []) fn(event); return event; },
         restore() {
             for (const [k, v] of Object.entries({ document: saved.document, window: saved.window, requestAnimationFrame: saved.raf })) {
                 if (v === undefined) delete globalThis[k]; else globalThis[k] = v;

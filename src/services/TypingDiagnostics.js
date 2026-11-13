@@ -17,6 +17,6 @@ export class TypingDiagnostics {
                 body: JSON.stringify(entry), keepalive: true
             }).catch(() => {});
         }
-        if (CONSOLE_MILESTONES.has(name) && Logger.consoleEnabled) console.info('[Velocity Type]', entry);
+        if (CONSOLE_MILESTONES.has(name) && Logger.consoleEnabled && import.meta.env?.DEV) console.info('[Velocity Type]', entry);
     }
 }

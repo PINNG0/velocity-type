@@ -149,14 +149,15 @@ test('conteúdo: frases novas são únicas, sem espaços estranhos e de tamanho 
     assert.ok(phrases.packs.pt.computing.length >= 28 && phrases.packs.en.people.length >= 28);
 });
 
-test('seletor de pinturas e análise pós-corrida aparecem na UI', async () => {
+test('garagem e análise pós-corrida aparecem na UI', async () => {
     const t = await boot('strict');
     try {
         const ui = t.controller.ui;
-        ui.progressionView.renderSkins(6);
+        ui.menuView.open('garage');
         const html = t.dom.el('skin-picker').innerHTML;
-        assert.equal((html.match(/data-skin=/g) || []).length, CarSkins.length);
-        assert.equal((html.match(/ disabled/g) || []).length, 2, 'phantom e inferno bloqueados no nível 6');
+        assert.equal((html.match(/data-skin-preview=/g) || []).length, CarSkins.length);
+        assert.equal((html.match(/🔒/g) || []).length, CarSkins.length - 1, 'nível 1: só o clássico liberado');
+        assert.equal(t.dom.el('garage-equip').disabled, true, 'já equipado');
         ui.renderInsights(baseResult({ wpmSeries: [20, 40, 60, 55, 70], topMisses: [{ key: ' ', count: 3 }, { key: 'ç', count: 2 }] }));
         assert.equal(t.dom.el('result-insights').hidden, false);
         assert.match(t.dom.el('result-chart').innerHTML, /<polyline/);

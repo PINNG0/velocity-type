@@ -15,7 +15,7 @@ export const StorageKeys = Object.freeze({
 export const HISTORY_LIMIT = 200;
 
 function storage() {
-    try { return globalThis.localStorage ?? null; } catch { return null; }
+    try { return StorageService.backend ?? globalThis.localStorage ?? null; } catch { return null; }
 }
 
 // Único ponto de acesso ao localStorage. Falhas nunca lançam: retornam fallback/false e vão para o Logger.
@@ -23,6 +23,8 @@ export class StorageService {
     static key = StorageKeys.bestPrefix;
     static historyKey = StorageKeys.history;
     static lastError = null;
+    // Backend alternativo (ex.: módulo Data da CrazyGames). null = localStorage do navegador.
+    static backend = null;
 
     static get(key, fallback = null) {
         const s = storage();
@@ -144,6 +146,7 @@ export class StorageService {
             distance: Math.floor(finite(record.distance, 0, 10000000) ?? 0),
             maxSpeed: finite(record.maxSpeed, 0, 1000) ?? 0,
             phrasesCompleted: Math.floor(finite(record.phrasesCompleted, 0, 1000000) ?? 0),
+            ...(finite(record.charsTyped, 0, 10000000) !== null ? { charsTyped: Math.floor(finite(record.charsTyped, 0, 10000000)) } : {}),
             modeLabel: safeText(record.modeLabel, 60) || 'Corrida',
             difficultyLabel: safeText(record.difficultyLabel, 60) || 'Médio',
             difficultyMode: ['adaptive', 'very-easy', 'easy', 'medium', 'hard', 'very-hard'].includes(record.difficultyMode) ? record.difficultyMode : 'medium',

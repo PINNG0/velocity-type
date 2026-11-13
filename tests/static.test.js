@@ -35,9 +35,7 @@ test('todo id procurado pelo UIManager existe no HTML (obrigatórios e opcionais
     const block = ui.match(/const ids = \{([\s\S]*?)\n        \};/)[1];
     const wanted = [...block.matchAll(/:\s*'([a-z0-9-]+)'/g)].map(m => m[1]);
     assert.ok(wanted.length > 80);
-    // Nós legados do HUD foram removidos de propósito e são opcionais no UIManager.
-    const legacyOptional = new Set(['race-time', 'race-position', 'distance-value']);
-    const missing = wanted.filter(id => !legacyOptional.has(id) && !new RegExp(`id="${id}"`).test(html));
+    const missing = wanted.filter(id => !new RegExp(`id="${id}"`).test(html));
     assert.deepEqual(missing, [], `ids ausentes no HTML: ${missing.join(', ')}`);
 });
 
@@ -64,7 +62,7 @@ test('smoke: todos os módulos (exceto main.js) importam sem erro em ambiente li
 test('package.json e dados do jogo estão íntegros', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     for (const script of ['dev', 'build', 'preview', 'test']) assert.ok(pkg.scripts[script], `script ${script}`);
-    for (const f of ['public/data/words/phrases.json', 'public/data/words/words.json', 'public/data/cars/cars.json', 'public/data/tracks/tracks.json']) {
+    for (const f of ['public/data/words/phrases.json']) {
         assert.doesNotThrow(() => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8')), f);
     }
 });
@@ -83,4 +81,17 @@ test('CSS: .track permanece absolute (regressão: regra position:relative escond
     // elementos que dependem do .track como contêiner
     assert.match(css, /\.car\s*\{[^}]*position:\s*absolute/);
     assert.match(css, /\.opponent-layer\s*\{[^}]*position:\s*absolute/);
+});
+
+test('CSS do menu: botões à esquerda (sem o centralizador antigo) e submenu substitui o início', () => {
+    const css = fs.readFileSync(path.join(root, 'src/ui/styles/main.css'), 'utf8');
+    const rule = selector => { const m = css.match(new RegExp(`(^|\\})\\s*${selector.replace(/[.#\\[\\]()]/g, '\\\\$&')}\\s*\\{([^}]*)\\}`, 'm')); return m ? m[2] : ''; };
+    const stage = rule('#main-menu.menu-stage');
+    assert.match(stage, /align-items:\s*stretch/, 'a regra antiga #main-menu {align-items:center} centralizava os botões');
+    assert.match(stage, /justify-content:\s*flex-start/);
+    assert.match(stage, /padding:\s*0\b/);
+    assert.match(rule('.menu-home'), /align-items:\s*flex-start/);
+    assert.match(css, /\.submenu-open \.menu-home\s*\{\s*display:\s*none/, 'ao abrir um submenu o início some');
+    assert.match(rule('.menu-subscreen'), /flex:\s*1/, 'submenu ocupa a janela toda');
+    assert.match(css, /\.mini-brand/);
 });
